@@ -7,6 +7,10 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
 public class MainDAISE {
 	String gitRepositoryPath;
 	String metadataPath;
@@ -16,15 +20,24 @@ public class MainDAISE {
 	boolean verbose;
 	boolean help;
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		MainDAISE main = new MainDAISE();
 		main.run(args);
 	}
 	
-	private void run(String[] args){
+	private void run(String[] args) throws IOException {
 		Options options = createOptions();
 
 		if (parseOptions(options, args)) {
+
+			MetaData metaData = Utils.readMetadataCSV(metadataPath);
+			testPrint(metaData);
+
+
+			// to extract developer email List
+
+
+
 			if (help) {
 				printHelp(options);
 				return; 
@@ -37,7 +50,22 @@ public class MainDAISE {
 			System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 		}
 	}
-	
+
+	private void testPrint(MetaData metaData) {
+		for(HashMap<String,String> metricToValueMap : metaData.metricToValueMapList) {
+
+
+			int cnt = 1;
+			for(String key : metaData.metrics) { //equal to metricToValueMap.keySet()
+
+				String val = metricToValueMap.get(key);
+
+				System.out.println("metric["+cnt+"]"+" key: " + key + ", value: " + val);
+				cnt ++;
+			}
+		}
+	}
+
 	private boolean parseOptions(Options options, String[] args) {
 		CommandLineParser parser = new DefaultParser();
 
@@ -84,12 +112,14 @@ public class MainDAISE {
 		
 		options.addOption(Option.builder("s").longOpt("startdate")
 				.desc("Start date for collecting bug-introducing changes. Format: \"yyyy-MM-dd HH:mm:ss\"")
+				.hasArg()
 				.argName("Start date")
 				.required()
 				.build());
 
 		options.addOption(Option.builder("e").longOpt("enddate")
 				.desc("End date for collecting bug-introducing changes. Format: \"yyyy-MM-dd HH:mm:ss\"")
+				.hasArg()
 				.argName("End date")
 				.required()
 				.build());
