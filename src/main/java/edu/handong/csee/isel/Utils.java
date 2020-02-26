@@ -1,37 +1,34 @@
 package edu.handong.csee.isel;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import jdk.jfr.MetadataDefinition;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
+
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 public class Utils {
     public static MetaData readMetadataCSV(String metadataPath) throws IOException {
-        ArrayList<HashMap<String,String>> metricToValueMapList = new ArrayList<>();
+        ArrayList<HashMap<String, String>> metricToValueMapList = new ArrayList<>();
 
-        BufferedReader br = new BufferedReader(new FileReader(metadataPath));
+        Reader in = new FileReader(metadataPath);
+        Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
 
-        String line = br.readLine();
+        for (CSVRecord record : records) {
 
-        String[] metrics = line.split(",");
+            HashMap<String, String> metricToValueMap = new HashMap<>();
 
-        while((line = br.readLine()) != null) {
+            for (String metric : MetaData.headers) {
 
-            HashMap<String,String> metricToValueMap = new HashMap<>();
-
-            String[] values = line.split(",");
-            for(int i = 0; i < metrics.length; i++) {
-                metricToValueMap.put(metrics[i],values[i]);
+                metricToValueMap.put(metric, record.get(metric));
             }
 
             metricToValueMapList.add(metricToValueMap);
         }
 
-        MetaData metaData = new MetaData(Arrays.asList(metrics),metricToValueMapList);
+        MetaData metaData = new MetaData(Arrays.asList(DeveloperInfo.CSVHeader), metricToValueMapList);
         return metaData;
     }
 }
