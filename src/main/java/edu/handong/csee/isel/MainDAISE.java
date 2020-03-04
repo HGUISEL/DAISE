@@ -38,7 +38,7 @@ public class MainDAISE {
 
 			MetaData metaData = Utils.readMetadataCSV(metadataPath); //testPrint(metaData);
 
-			ArrayList<DeveloperInfo> developerInfoList = new ArrayList<>();
+			HashMap<String,DeveloperInfo> developerInfoMap = new HashMap<String,DeveloperInfo>();
 			Set<String> developerNameSet = getDeveloperNameSet(metaData); // System.out.println(developerSet);
 			for(String developerName : developerNameSet) {
 
@@ -67,26 +67,23 @@ public class MainDAISE {
 					dayToCountMap.computeIfPresent(editedDay, (day, cnt) -> cnt++);
 				}
 
-				DeveloperInfo developerInfo = new DeveloperInfo(developerName, editedFileCount, numBuggy, totalEditedLine / editedFileCount, maxDay(dayToCountMap));
-				developerInfoList.add(developerInfo);
+				DeveloperInfo developerInfo = new DeveloperInfo(editedFileCount, numBuggy, totalEditedLine / editedFileCount, maxDay(dayToCountMap));
+				developerInfoMap.put(developerName, developerInfo);
 			}
 
 
 			FileWriter out = new FileWriter(outputPath + File.separator + "Developer_" + metadataPath.substring(metadataPath.lastIndexOf(File.separator)+1));
 			try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
 					.withHeader(DeveloperInfo.CSVHeader))) {
-				developerInfoList.forEach((developerInfo) -> {
+				developerInfoMap.forEach((developerName, developerInfo) -> {
 					try {
-						printer.printRecord(developerInfo.id,String.valueOf(developerInfo.totalEditedLine),String.valueOf(developerInfo.numOfBug), String.valueOf(developerInfo.meanEditedLine), String.valueOf(developerInfo.mostCommitDay));
+						printer.printRecord(developerName, String.valueOf(developerInfo.totalEditedFile),String.valueOf(developerInfo.numOfBug), String.valueOf(developerInfo.meanEditedLine), String.valueOf(developerInfo.mostCommitDay));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				});
 				printer.flush();
 			}
-
-
-
 
 			if (help) {
 				printHelp(options);
@@ -103,21 +100,15 @@ public class MainDAISE {
 		long max = 0;
 		DeveloperInfo.WeekDay maxDay = null;
 
-//		System.out.println("start!");
-
 		for(DeveloperInfo.WeekDay day : dayToCountMap.keySet()) {
 
 			long cnt = dayToCountMap.get(day);
-
-//			System.out.println("key: " + day + ", value: " + cnt);
 
 			if(max < cnt) {
 				maxDay = day;
 				max = cnt;
 			}
 		}
-
-//		System.out.println("end");
 
 		if(maxDay == null) {
 			throw new Exception("Sum of Edited Day of the week (Sun, Mon, ..., Sat) is Zero");
