@@ -40,6 +40,9 @@ public class MainDAISE {
 
 			HashMap<String,DeveloperInfo> developerInfoMap = new HashMap<String,DeveloperInfo>();
 			Set<String> developerNameSet = getDeveloperNameSet(metaData); // System.out.println(developerSet);
+
+
+
 			for(String developerName : developerNameSet) {
 
 				long numBuggy = 0;
@@ -53,7 +56,22 @@ public class MainDAISE {
 						continue;
 					}
 
+					// TODO: HashMap<sun, mon, two, ..., sat : Integer>
+
+
+
+					// TODO: HashMap<Commit : Info>
+
+
+					//TODO: deviations of edited lines for each commit and commit-file
+
+
+					//TODO: remove this
 					boolean isBug = metricToValueMap.get("isBuggy").equals("buggy");
+
+
+
+					//TODO: move below to out of inner for-state
 					long editedLine = Long.parseLong(metricToValueMap.get("Modify Lines"));
 					editedFileCount++;
 					String weekDay = metricToValueMap.get("CommitDate");
@@ -66,6 +84,10 @@ public class MainDAISE {
 					dayToCountMap.putIfAbsent(editedDay, 1L);
 					dayToCountMap.computeIfPresent(editedDay, (day, cnt) -> cnt++);
 				}
+
+
+
+				//TODO: move maxDay(dayToCountMap) from below to here
 
 				DeveloperInfo developerInfo = new DeveloperInfo(editedFileCount, numBuggy, totalEditedLine / editedFileCount, maxDay(dayToCountMap));
 				developerInfoMap.put(developerName, developerInfo);
