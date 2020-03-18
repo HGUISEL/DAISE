@@ -12,10 +12,7 @@ import org.apache.commons.csv.CSVPrinter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class MainDAISE {
 	String gitRepositoryPath;
@@ -41,14 +38,10 @@ public class MainDAISE {
 			HashMap<String,DeveloperInfo> developerInfoMap = new HashMap<String,DeveloperInfo>();
 			Set<String> developerNameSet = getDeveloperNameSet(metaData); // System.out.println(developerSet);
 
-
-
+			HashMap<String, HashSet<String>> developerToCommitSetMap = new HashMap<>();
 			for(String developerName : developerNameSet) {
 
-				long numBuggy = 0;
-				double totalEditedLine = 0;
-				int editedFileCount = 0;
-				HashMap<DeveloperInfo.WeekDay, Long> dayToCountMap = new HashMap<>();
+				HashSet<String> commitSet = new HashSet<>();
 
 				for (HashMap<String, String> metricToValueMap : metaData.metricToValueMapList) {
 					String dev = metricToValueMap.get("AuthorID");
@@ -56,42 +49,146 @@ public class MainDAISE {
 						continue;
 					}
 
-					// TODO: HashMap<sun, mon, two, ..., sat : Integer>
+					int endIndexOfCommit = metricToValueMap.get("Key").indexOf("-");
+					String commit = metricToValueMap.get("Key").substring(0, endIndexOfCommit);
 
+					commitSet.add(commit);
 
+				}
+				developerToCommitSetMap.put(developerName,commitSet);
+			}
 
-					// TODO: HashMap<Commit : Info>
+			HashMap<String, List<HashMap<String,String>>> commitToMetricToValueMapListMap = new HashMap<>();
+			for (HashMap<String, String> metricToValueMap : metaData.metricToValueMapList) {
+				int endIndexOfCommit = metricToValueMap.get("Key").indexOf("-");
+				String commit = metricToValueMap.get("Key").substring(0, endIndexOfCommit);
 
+				if(commitToMetricToValueMapListMap.containsKey(commit)) {
+					List<HashMap<String,String>> list = commitToMetricToValueMapListMap.get(commit);
+					list.add(metricToValueMap);
+				} else {
+					List<HashMap<String, String>> list = new ArrayList<>();
+					list.add(metricToValueMap);
+					commitToMetricToValueMapListMap.put(commit, list);
+				}
+			}
 
-					//TODO: deviations of edited lines for each commit and commit-file
+			for(String developer : developerNameSet) {
 
+				int bugCount = 0;
 
-					//TODO: remove this
-					boolean isBug = metricToValueMap.get("isBuggy").equals("buggy");
+				HashSet<String> commitSet = developerToCommitSetMap.get(developer);
 
+				HashMap<DeveloperInfo.WeekDay, Double> dayOfWeekToRatioMap = new HashMap<>(); // Mon: 0.1, Two: 0.2, ..., Sat: 0.3 -> total: 1.0
+				double meanOfEditedLineOfCommit;
+				double meanOfEditedLineOfCommitPath = 0;
+				double varianceOfCommit = 0;
+				double varianceOfCommitPath = 0;
 
+				// variance of commit, commit Path
+				double totalCommit = commitSet.size();
+				double totalCommitPath = 0;
+				double totalEditedLineForEachCommit = 0;
+				double totalEditedLineForEachCommitPath = 0;
 
-					//TODO: move below to out of inner for-state
-					long editedLine = Long.parseLong(metricToValueMap.get("Modify Lines"));
-					editedFileCount++;
-					String weekDay = metricToValueMap.get("CommitDate");
-					DeveloperInfo.WeekDay editedDay = toEnum(weekDay);
+				for(String commit : commitSet) {
 
-					if (isBug) {
-						numBuggy++;
+					List<HashMap<String,String>> metricToValueMapList = commitToMetricToValueMapListMap.get(commit);
+
+					totalCommitPath += metricToValueMapList.size();
+
+					for(HashMap<String,String> metricToValueMap : metricToValueMapList) {
+
+						double editedLine = Double.parseDouble(metricToValueMap.get("Modify Lines"));
+						totalEditedLineForEachCommit += editedLine;
+						totalEditedLineForEachCommitPath += editedLine;
 					}
-					totalEditedLine += editedLine;
-					dayToCountMap.putIfAbsent(editedDay, 1L);
-					dayToCountMap.computeIfPresent(editedDay, (day, cnt) -> cnt++);
+				}
+				meanOfEditedLineOfCommit = totalEditedLineForEachCommit / totalCommit;
+				meanOfEditedLineOfCommitPath = totalEditedLineForEachCommitPath / totalCommitPath;
+
+				for(String commit : commitSet) {
+
+					List<HashMap<String,String>> metricToValueMapList = commitToMetricToValueMapListMap.get(commit);
+
+					for(HashMap<String,String> metricToValueMap : metricToValueMapList) {
+
+						double editedLine = Double.parseDouble(metricToValueMap.get("Modify Lines"));
+
+
+
+						varianceOfCommitPath += Math.pow(editedLine - meanOfEditedLineOfCommitPath, 2);
+						varianceOfCommit += Math.pow(editedLine - meanOfEditedLineOfCommit, 2);
+					}
+				}
+				varianceOfCommit /= totalCommit;
+				varianceOfCommitPath /= totalCommitPath;
+
+				// dayOfWeekToRatioMap
+
+				for(String commit : commitSet) {
+					List<HashMap<String,String>> metricToValueMapList = commitToMetricToValueMapListMap.get(commit);
+
+					DeveloperInfo.WeekDay weekDay = toEnum(metricToValueMapList.get(0).get("CommitDate"));
+
+					boolean isBug = metricToValueMapList.get(0).get("isBuggy").equals("buggy");
+					if(isBug) {
+						bugCount ++;
+					}
+
+					dayOfWeekToRatioMap.putIfAbsent(weekDay, 1.0);
+					dayOfWeekToRatioMap.computeIfPresent(weekDay, (key,val) -> val++);
 				}
 
+				for(DeveloperInfo.WeekDay weekDay : dayOfWeekToRatioMap.keySet()) {
 
+					double val = dayOfWeekToRatioMap.get(weekDay);
+					dayOfWeekToRatioMap.put(weekDay, val / totalCommit);
+				}
 
-				//TODO: move maxDay(dayToCountMap) from below to here
+//				HashMap<String,DeveloperInfo> developerInfoMap = new HashMap<String,DeveloperInfo>();
+				//{"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+				double sun,mon,tue,wed,thu,fri,sat;
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Sun) ){
+					sun = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Sun);
+				} else {
+					sun = 0;
+				}
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Mon) ){
+					mon = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Mon);
+				} else {
+					mon = 0;
+				}
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Tue) ){
+					tue = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Tue);
+				} else {
+					tue = 0;
+				}
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Wed) ){
+					wed = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Wed);
+				} else {
+					wed = 0;
+				}
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Thu) ){
+					thu = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Thu);
+				} else {
+					thu = 0;
+				}
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Fri) ){
+					fri = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Fri);
+				} else {
+					fri = 0;
+				}
+				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Sat) ){
+					sat = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Sat);
+				} else {
+					sat = 0;
+				}
 
-				DeveloperInfo developerInfo = new DeveloperInfo(editedFileCount, numBuggy, totalEditedLine / editedFileCount, maxDay(dayToCountMap));
-				developerInfoMap.put(developerName, developerInfo);
+				DeveloperInfo developerInfo = new DeveloperInfo(developer,totalCommit,totalCommitPath,meanOfEditedLineOfCommit,meanOfEditedLineOfCommitPath,varianceOfCommit,varianceOfCommitPath,sun,mon,tue,wed,thu,fri,sat);
+				developerInfoMap.put(developer,developerInfo);
 			}
+
 
 
 			FileWriter out = new FileWriter(outputPath + File.separator + "Developer_" + metadataPath.substring(metadataPath.lastIndexOf(File.separator)+1));
@@ -99,7 +196,8 @@ public class MainDAISE {
 					.withHeader(DeveloperInfo.CSVHeader))) {
 				developerInfoMap.forEach((developerName, developerInfo) -> {
 					try {
-						printer.printRecord(developerName, String.valueOf(developerInfo.totalEditedFile),String.valueOf(developerInfo.numOfBug), String.valueOf(developerInfo.meanEditedLine), String.valueOf(developerInfo.mostCommitDay));
+						//{"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+						printer.printRecord(developerName, String.valueOf(developerInfo.totalCommit),String.valueOf(developerInfo.totalCommitPath), String.valueOf(developerInfo.meanEditedLineInCommit), String.valueOf(developerInfo.meanEditedLineInCommitPath),String.valueOf(developerInfo.varianceOfCommit),String.valueOf(developerInfo.varianceOfCommitPath),String.valueOf(developerInfo.Sun),String.valueOf(developerInfo.Mon),String.valueOf(developerInfo.Tue),String.valueOf(developerInfo.Wed),String.valueOf(developerInfo.Thu),String.valueOf(developerInfo.Fri),String.valueOf(developerInfo.Sat));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
