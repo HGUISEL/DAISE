@@ -136,8 +136,8 @@ public class MainDAISE {
 						bugCount ++;
 					}
 
+					dayOfWeekToRatioMap.computeIfPresent(weekDay, (key,val) -> val += 1);
 					dayOfWeekToRatioMap.putIfAbsent(weekDay, 1.0);
-					dayOfWeekToRatioMap.computeIfPresent(weekDay, (key,val) -> val++);
 				}
 
 				for(DeveloperInfo.WeekDay weekDay : dayOfWeekToRatioMap.keySet()) {
