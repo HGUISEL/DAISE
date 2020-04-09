@@ -79,7 +79,9 @@ public class MainDAISE {
 
 				HashSet<String> commitSet = developerToCommitSetMap.get(developer);
 
-				HashMap<DeveloperInfo.WeekDay, Double> dayOfWeekToRatioMap = new HashMap<>(); // Mon: 0.1, Two: 0.2, ..., Sat: 0.3 -> total: 1.0
+				HashMap<DeveloperInfo.WeekDay, Double> dayOfWeekToRatioMap = getEmptyWeekMap(); // Mon: 0.1, Two: 0.2, ..., Sat: 0.3 -> total: 1.0
+				HashMap<Integer, Integer> hourMap = getEmptyHourMap();
+				
 				double meanOfEditedLineOfCommit;
 				double meanOfEditedLineOfCommitPath = 0;
 				double varianceOfCommit = 0;
@@ -94,7 +96,6 @@ public class MainDAISE {
 				for(String commit : commitSet) {
 
 					List<HashMap<String,String>> metricToValueMapList = commitToMetricToValueMapListMap.get(commit);
-
 					totalCommitPath += metricToValueMapList.size();
 
 					for(HashMap<String,String> metricToValueMap : metricToValueMapList) {
@@ -124,12 +125,15 @@ public class MainDAISE {
 				varianceOfCommit /= totalCommit;
 				varianceOfCommitPath /= totalCommitPath;
 
+
 				// dayOfWeekToRatioMap
+				// hourMap
 
 				for(String commit : commitSet) {
-					List<HashMap<String,String>> metricToValueMapList = commitToMetricToValueMapListMap.get(commit);
+					List<HashMap<String,String>> metricToValueMapList = commitToMetricToValueMapListMap.get(commit); // extract metrics relative to developer commit
+					DeveloperInfo.WeekDay weekDay = toEnum(metricToValueMapList.get(0).get("CommitDate")); // each metic in the commit has same Commit date
+					int commitHour = Integer.parseInt(metricToValueMapList.get(0).get("CommitHour"));
 
-					DeveloperInfo.WeekDay weekDay = toEnum(metricToValueMapList.get(0).get("CommitDate"));
 
 					boolean isBug = metricToValueMapList.get(0).get("isBuggy").equals("buggy");
 					if(isBug) {
@@ -137,7 +141,7 @@ public class MainDAISE {
 					}
 
 					dayOfWeekToRatioMap.computeIfPresent(weekDay, (key,val) -> val += 1);
-					dayOfWeekToRatioMap.putIfAbsent(weekDay, 1.0);
+					hourMap.computeIfPresent(commitHour, (key, val)->val += 1);
 				}
 
 				for(DeveloperInfo.WeekDay weekDay : dayOfWeekToRatioMap.keySet()) {
@@ -146,46 +150,7 @@ public class MainDAISE {
 					dayOfWeekToRatioMap.put(weekDay, val / totalCommit);
 				}
 
-//				HashMap<String,DeveloperInfo> developerInfoMap = new HashMap<String,DeveloperInfo>();
-				//{"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-				double sun,mon,tue,wed,thu,fri,sat;
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Sun) ){
-					sun = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Sun);
-				} else {
-					sun = 0;
-				}
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Mon) ){
-					mon = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Mon);
-				} else {
-					mon = 0;
-				}
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Tue) ){
-					tue = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Tue);
-				} else {
-					tue = 0;
-				}
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Wed) ){
-					wed = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Wed);
-				} else {
-					wed = 0;
-				}
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Thu) ){
-					thu = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Thu);
-				} else {
-					thu = 0;
-				}
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Fri) ){
-					fri = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Fri);
-				} else {
-					fri = 0;
-				}
-				if( dayOfWeekToRatioMap.containsKey(DeveloperInfo.WeekDay.Sat) ){
-					sat = dayOfWeekToRatioMap.get(DeveloperInfo.WeekDay.Sat);
-				} else {
-					sat = 0;
-				}
-
-				DeveloperInfo developerInfo = new DeveloperInfo(developer,totalCommit,totalCommitPath,meanOfEditedLineOfCommit,meanOfEditedLineOfCommitPath,varianceOfCommit,varianceOfCommitPath,sun,mon,tue,wed,thu,fri,sat);
+				DeveloperInfo developerInfo = new DeveloperInfo(developer,totalCommit,totalCommitPath,meanOfEditedLineOfCommit,meanOfEditedLineOfCommitPath,varianceOfCommit,varianceOfCommitPath,dayOfWeekToRatioMap,hourMap);
 				developerInfoMap.put(developer,developerInfo);
 			}
 
@@ -196,8 +161,31 @@ public class MainDAISE {
 					.withHeader(DeveloperInfo.CSVHeader))) {
 				developerInfoMap.forEach((developerName, developerInfo) -> {
 					try {
-						//{"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-						printer.printRecord(developerName, String.valueOf(developerInfo.totalCommit),String.valueOf(developerInfo.totalCommitPath), String.valueOf(developerInfo.meanEditedLineInCommit), String.valueOf(developerInfo.meanEditedLineInCommitPath),String.valueOf(developerInfo.varianceOfCommit),String.valueOf(developerInfo.varianceOfCommitPath),String.valueOf(developerInfo.Sun),String.valueOf(developerInfo.Mon),String.valueOf(developerInfo.Tue),String.valueOf(developerInfo.Wed),String.valueOf(developerInfo.Thu),String.valueOf(developerInfo.Fri),String.valueOf(developerInfo.Sat));
+						// CSVHeader = {"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"};
+
+						List<String> metricList = new ArrayList<>();
+
+						metricList.add(developerName);
+						metricList.add(String.valueOf(developerInfo.totalCommit));
+						metricList.add(String.valueOf(developerInfo.totalCommitPath));
+						metricList.add(String.valueOf(developerInfo.meanEditedLineInCommit));
+						metricList.add(String.valueOf(developerInfo.meanEditedLineInCommitPath));
+						metricList.add(String.valueOf(developerInfo.varianceOfCommit));
+						metricList.add(String.valueOf(developerInfo.varianceOfCommitPath));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Sun)));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Mon)));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Tue)));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Wed)));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Thu)));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Fri)));
+						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Sat)));
+
+						for(int i = 0; i < 24; i ++) {
+							metricList.add((String.valueOf(developerInfo.hourMap.get(i))));
+						}
+
+						printer.printRecord(metricList);
+
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -214,6 +202,32 @@ public class MainDAISE {
 		if (verbose) {
 			System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 		}
+	}
+
+	private HashMap<DeveloperInfo.WeekDay, Double> getEmptyWeekMap() {
+
+		HashMap<DeveloperInfo.WeekDay, Double> weekMap = new HashMap<>();
+
+		weekMap.put(DeveloperInfo.WeekDay.Sun,0.0);
+		weekMap.put(DeveloperInfo.WeekDay.Mon,0.0);
+		weekMap.put(DeveloperInfo.WeekDay.Tue,0.0);
+		weekMap.put(DeveloperInfo.WeekDay.Wed,0.0);
+		weekMap.put(DeveloperInfo.WeekDay.Thu,0.0);
+		weekMap.put(DeveloperInfo.WeekDay.Fri,0.0);
+		weekMap.put(DeveloperInfo.WeekDay.Sat,0.0);
+
+		return weekMap;
+	}
+
+	private HashMap<Integer, Integer> getEmptyHourMap() {
+
+		HashMap<Integer, Integer> hourMap = new HashMap<Integer, Integer>();
+
+		for(int i = 0; i < 24; i++) {
+			hourMap.put(i,0);
+		}
+
+		return hourMap;
 	}
 
 	private DeveloperInfo.WeekDay maxDay(HashMap<DeveloperInfo.WeekDay, Long> dayToCountMap) throws Exception {
