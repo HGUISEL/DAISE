@@ -208,29 +208,29 @@ public class MainCluster {
 				}
 				
 			//(6)apply classify algorithm and save result (optional)
+				DataSource source = new DataSource(metadataArffPath);
+				Instances clusterData = source.getDataSet();
+				clusterData.setClassIndex(0);
+				
+				AttributeStats attStats = clusterData.attributeStats(0);
+				
+				Classifier randomForest = new RandomForest();
+				randomForest.buildClassifier(clusterData);
+				
+				Evaluation evaluation = new Evaluation(clusterData);
+				evaluation.crossValidateModel(randomForest, clusterData, 10, new Random(1));
+				
+				BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(clusterFolder + "result-main.txt")));
+				String strSummary = evaluation.toSummaryString();
+				String detail = evaluation.toClassDetailsString();
+				bufferedWriter.write(clusterData.attribute(0).toString());
+				bufferedWriter.write("\n");
+				bufferedWriter.write(attStats.toString());
+				bufferedWriter.write(strSummary);
+				bufferedWriter.write(detail);
+				bufferedWriter.close();
+				
 				for(int i = 0; i < clusterName.size(); i++){
-					DataSource source = new DataSource(metadataArffPath);
-					Instances clusterData = source.getDataSet();
-					clusterData.setClassIndex(0);
-					
-					AttributeStats attStats = clusterData.attributeStats(0);
-					
-					Classifier randomForest = new RandomForest();
-					randomForest.buildClassifier(clusterData);
-					
-					Evaluation evaluation = new Evaluation(clusterData);
-					evaluation.crossValidateModel(randomForest, clusterData, 10, new Random(1));
-					
-					BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(clusterFolder + "result-main.txt")));
-					String strSummary = evaluation.toSummaryString();
-					String detail = evaluation.toClassDetailsString();
-					bufferedWriter.write(clusterData.attribute(0).toString());
-					bufferedWriter.write(attStats.toString());
-					bufferedWriter.write(strSummary);
-					bufferedWriter.write(detail);
-					bufferedWriter.close();
-					
-					
 					String path = clusterName.get(i);
 					source = new DataSource(path);
 					clusterData = source.getDataSet();
@@ -245,6 +245,9 @@ public class MainCluster {
 					bufferedWriter = new BufferedWriter(new FileWriter(new File(clusterFolder + "result-cluster" + i + ".txt")));
 					strSummary = evaluation.toSummaryString();
 					detail = evaluation.toClassDetailsString();
+					bufferedWriter.write(clusterData.attribute(0).toString());
+					bufferedWriter.write("\n");
+					bufferedWriter.write(attStats.toString());
 					bufferedWriter.write(strSummary);
 					bufferedWriter.write(detail);
 //					System.out.println(strSummary);
