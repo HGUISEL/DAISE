@@ -80,10 +80,21 @@ public class MainDAISE {
 				HashSet<String> commitSet = developerToCommitSetMap.get(developer);
 
 				HashMap<DeveloperInfo.WeekDay, Double> dayOfWeekToRatioMap = getEmptyWeekMap(); // Mon: 0.1, Two: 0.2, ..., Sat: 0.3 -> total: 1.0
-				HashMap<Integer, Integer> hourMap = getEmptyHourMap();
+				HashMap<Integer, Double> hourMap = getEmptyHourMap(); // <hour, count>
 				
 				double meanOfEditedLineOfCommit;
 				double meanOfEditedLineOfCommitPath = 0;
+				double meanOfAddedLineOfCommit;
+				double meanOfAddedLineOfCommitPath = 0;
+				double meanOfDeletedLineOfCommit;
+				double meanOfDeletedLineOfCommitPath = 0;
+				double meanOfDistributionModifiedLineOfCommit;
+				double meanOfDistributionModifiedLineOfCommitPath = 0;
+
+				double meanOfNumOfSubsystem;
+				double meanOfNumOfDirectories;
+				double meanOfNumOfFiles;
+
 				double varianceOfCommit = 0;
 				double varianceOfCommitPath = 0;
 
@@ -92,6 +103,16 @@ public class MainDAISE {
 				double totalCommitPath = 0;
 				double totalEditedLineForEachCommit = 0;
 				double totalEditedLineForEachCommitPath = 0;
+				double totalAddedLineOfCommit = 0;
+				double totalAddedLineOfCommitPath = 0;
+				double totalDeletedLineOfCommit = 0;
+				double totalDeletedLineOfCommitPath = 0;
+				double totalDistributionModifiedLineOfCommit = 0;
+				double totalDistributionModifiedLineOfCommitPath = 0;
+
+				double totalNumOfSubsystem = 0;
+				double totalNumOfDirectories = 0;
+				double totalNumOfFiles = 0;
 
 				for(String commit : commitSet) {
 
@@ -101,12 +122,40 @@ public class MainDAISE {
 					for(HashMap<String,String> metricToValueMap : metricToValueMapList) {
 
 						double editedLine = Double.parseDouble(metricToValueMap.get("Modify Lines"));
+						double addedLine = Double.parseDouble(metricToValueMap.get("Add Lines"));
+						double deletedLine = Double.parseDouble(metricToValueMap.get("Delete Lines"));
+						double distributionLine = Double.parseDouble(metricToValueMap.get("Distribution modified Lines"));
+						double subsystem = Double.parseDouble(metricToValueMap.get("numOfSubsystems"));
+						double directories = Double.parseDouble(metricToValueMap.get("numOfDirectories"));
+						double files = Double.parseDouble(metricToValueMap.get("numOfFiles"));
+
+
 						totalEditedLineForEachCommit += editedLine;
 						totalEditedLineForEachCommitPath += editedLine;
+						totalAddedLineOfCommit += addedLine;
+						totalAddedLineOfCommitPath += addedLine;
+						totalDeletedLineOfCommit += deletedLine;
+						totalDeletedLineOfCommitPath += deletedLine;
+						totalDistributionModifiedLineOfCommit += distributionLine;
+						totalDistributionModifiedLineOfCommitPath += distributionLine;
+
+						totalNumOfSubsystem += subsystem;
+						totalNumOfDirectories += directories;
+						totalNumOfFiles += files;
 					}
 				}
 				meanOfEditedLineOfCommit = totalEditedLineForEachCommit / totalCommit;
 				meanOfEditedLineOfCommitPath = totalEditedLineForEachCommitPath / totalCommitPath;
+				meanOfAddedLineOfCommit = totalAddedLineOfCommit / totalCommit;
+				meanOfAddedLineOfCommitPath = totalAddedLineOfCommitPath / totalCommitPath;
+				meanOfDeletedLineOfCommit = totalDeletedLineOfCommit / totalCommit;
+				meanOfDeletedLineOfCommitPath = totalDeletedLineOfCommitPath / totalCommitPath;
+				meanOfDistributionModifiedLineOfCommit = totalDistributionModifiedLineOfCommit / totalCommit;
+				meanOfDistributionModifiedLineOfCommitPath = totalDistributionModifiedLineOfCommitPath / totalCommitPath;
+
+				meanOfNumOfSubsystem = totalNumOfSubsystem / totalCommit;
+				meanOfNumOfDirectories = totalNumOfDirectories / totalCommit;
+				meanOfNumOfFiles = totalNumOfFiles / totalCommit;
 
 				for(String commit : commitSet) {
 
@@ -115,8 +164,6 @@ public class MainDAISE {
 					for(HashMap<String,String> metricToValueMap : metricToValueMapList) {
 
 						double editedLine = Double.parseDouble(metricToValueMap.get("Modify Lines"));
-
-
 
 						varianceOfCommitPath += Math.pow(editedLine - meanOfEditedLineOfCommitPath, 2);
 						varianceOfCommit += Math.pow(editedLine - meanOfEditedLineOfCommit, 2);
@@ -144,13 +191,29 @@ public class MainDAISE {
 					hourMap.computeIfPresent(commitHour, (key, val)->val += 1);
 				}
 
+				// convert count -> ratio
+				for(int hour : hourMap.keySet()) {
+
+					double count = hourMap.get(hour);
+					hourMap.put(hour, count / totalCommit);
+				}
+
+				// convert count -> ratio
 				for(DeveloperInfo.WeekDay weekDay : dayOfWeekToRatioMap.keySet()) {
 
 					double val = dayOfWeekToRatioMap.get(weekDay);
 					dayOfWeekToRatioMap.put(weekDay, val / totalCommit);
 				}
 
-				DeveloperInfo developerInfo = new DeveloperInfo(developer,totalCommit,totalCommitPath,meanOfEditedLineOfCommit,meanOfEditedLineOfCommitPath,varianceOfCommit,varianceOfCommitPath,dayOfWeekToRatioMap,hourMap);
+				DeveloperInfo developerInfo = new DeveloperInfo(developer,totalCommit,totalCommitPath,meanOfEditedLineOfCommit,meanOfEditedLineOfCommitPath,varianceOfCommit,varianceOfCommitPath,meanOfAddedLineOfCommit,
+						meanOfAddedLineOfCommitPath,
+						meanOfDeletedLineOfCommit,
+						meanOfDeletedLineOfCommitPath,
+						meanOfDistributionModifiedLineOfCommit,
+						meanOfDistributionModifiedLineOfCommitPath,
+						meanOfNumOfSubsystem,
+						meanOfNumOfDirectories,
+						meanOfNumOfFiles,dayOfWeekToRatioMap,hourMap);
 				developerInfoMap.put(developer,developerInfo);
 			}
 
@@ -161,7 +224,7 @@ public class MainDAISE {
 					.withHeader(DeveloperInfo.CSVHeader))) {
 				developerInfoMap.forEach((developerName, developerInfo) -> {
 					try {
-						// CSVHeader = {"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"};
+//						CSVHeader = {"ID","totalCommit","totalCommitPath", "meanEditedLineInCommit", "meanEditedLineInCommitPath", "varianceOfCommit", "varianceOfCommitPath", "meanOfEditedLineOfCommit" ,"meanOfAddedLineOfCommit","meanOfAddedLineOfCommitPath","meanOfDeletedLineOfCommit","meanOfDeletedLineOfCommitPath","meanOfDistributionModifiedLineOfCommit","meanOfDistributionModifiedLineOfCommitPath","meanOfNumOfSubsystem","meanOfNumOfDirectories","meanOfNumOfFiles","Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat","0h","1h","2h","3h","4h","5h","6h","7h","8h","9h","10h","11h","12h","13h","14h","15h","16h","17h","18h","19h","20h","21h","22h","23h"};
 
 						List<String> metricList = new ArrayList<>();
 
@@ -172,6 +235,17 @@ public class MainDAISE {
 						metricList.add(String.valueOf(developerInfo.meanEditedLineInCommitPath));
 						metricList.add(String.valueOf(developerInfo.varianceOfCommit));
 						metricList.add(String.valueOf(developerInfo.varianceOfCommitPath));
+
+						metricList.add(String.valueOf(developerInfo.meanOfAddedLineOfCommit));
+						metricList.add(String.valueOf(developerInfo.meanOfAddedLineOfCommitPath));
+						metricList.add(String.valueOf(developerInfo.meanOfDeletedLineOfCommit));
+						metricList.add(String.valueOf(developerInfo.meanOfDeletedLineOfCommitPath));
+						metricList.add(String.valueOf(developerInfo.meanOfDistributionModifiedLineOfCommit));
+						metricList.add(String.valueOf(developerInfo.meanOfDistributionModifiedLineOfCommitPath));
+						metricList.add(String.valueOf(developerInfo.meanOfNumOfSubsystem));
+						metricList.add(String.valueOf(developerInfo.meanOfNumOfDirectories));
+						metricList.add(String.valueOf(developerInfo.meanOfNumOfFiles));
+
 						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Sun)));
 						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Mon)));
 						metricList.add(String.valueOf(developerInfo.weekRatioMap.get(DeveloperInfo.WeekDay.Tue)));
@@ -219,12 +293,12 @@ public class MainDAISE {
 		return weekMap;
 	}
 
-	private HashMap<Integer, Integer> getEmptyHourMap() {
+	private HashMap<Integer, Double> getEmptyHourMap() {
 
-		HashMap<Integer, Integer> hourMap = new HashMap<Integer, Integer>();
+		HashMap<Integer, Double> hourMap = new HashMap<>();
 
 		for(int i = 0; i < 24; i++) {
-			hourMap.put(i,0);
+			hourMap.put(i,0.0);
 		}
 
 		return hourMap;
