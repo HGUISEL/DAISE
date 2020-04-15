@@ -235,6 +235,7 @@ public class MainCluster {
 					source = new DataSource(path);
 					clusterData = source.getDataSet();
 					clusterData.setClassIndex(0);
+					attStats = clusterData.attributeStats(0);
 					
 					randomForest = new RandomForest();
 					randomForest.buildClassifier(clusterData);
