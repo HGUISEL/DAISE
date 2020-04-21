@@ -6,6 +6,8 @@
  * User Manual available at https://docs.gradle.org/6.2/userguide/java_library_plugin.html
  */
 
+
+
 plugins {
     // Apply the java-library plugin to add support for Java Library
     id 'java-library'
@@ -16,6 +18,9 @@ repositories {
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
+
+apply plugin: 'application'
+mainClassName = "edu.handong.csee.isel.MainDAISE"
 
 dependencies {
     // This dependency is exported to consumers, that is to say found on their compile classpath.
