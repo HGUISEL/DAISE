@@ -116,17 +116,8 @@ public class MainCluster {
 				 cluster.add(em.clusterInstance(inst));
 				 numOfCluster.add(em.clusterInstance(inst));
 				 numOfInstance.add(0);
-//		            System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst))); 
-		      } 
-//			 System.out.println(numOfCluster.size());
-//			 int j = 0;
-//			 for (String lien : developer) {
-//				 System.out.println(j + "  "+ lien);
-//				 
-//				 System.out.println(cluster.get(j));
-//				 j ++;
-//			 }
-			 
+//		            System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
+			 }
 				
 			//(3)read meta data final arff file
 				BufferedReader buffReader = new BufferedReader(new FileReader(new File(metadataArffPath)));
