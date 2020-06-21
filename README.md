@@ -21,4 +21,4 @@ Using developer information, profile developer, and clusteing developer.
 * [-i](https://github.com/HGUISEL/BugPatchCollector/issues/4) (Input Option)
 * -o (Directory Path of Result File Option)
 >The other options
-* -m (devleoper metric csv made at master branchin DAISE)
+* -m (devleoper metric csv made at master branch in DAISE)
