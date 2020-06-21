@@ -14,7 +14,7 @@ Developer_metric.csv made in BPC is required to generate Developer metric
 >The other options
 * -m (metric csv made in BPC)
 
-## Clustering devlopers (develop1)
+## Clustering devlopers (develop1 Branch)
 Using developer information, profile developer, and clusteing developer.
 
 ### Options
