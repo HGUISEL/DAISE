@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -52,6 +53,7 @@ public class MainCluster {
 	ArrayList<Integer> cluster = new ArrayList<Integer>();
 	ArrayList<Integer> numOfInstance = new ArrayList<Integer>();
 	TreeSet<Integer> numOfCluster = new TreeSet<Integer>();
+	ArrayList<Integer> numofDeveloperC = new ArrayList<Integer>(Collections.nCopies(20, 0));
 	
 //	HashMap<Integer,ClusterInfo> clusteringInformation = new HashMap<Integer,ClusterInfo>();
 	
@@ -114,11 +116,14 @@ public class MainCluster {
 				 int index = developerInstanceCSV.indexOf(inst.toString()); //cluster number 
 				 developer.add(developerNameCSV.get(index));//save developer
 				 cluster.add(em.clusterInstance(inst));
+//				 System.out.println(em.clusterInstance(inst));
 				 numOfCluster.add(em.clusterInstance(inst));
+				 numofDeveloperC.set(em.clusterInstance(inst), numofDeveloperC.get(em.clusterInstance(inst))+1);
 				 numOfInstance.add(0);
 //		            System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
 			 }
-				
+			 	
+//				System.out.println(numofDeveloperC);
 			//(3)read meta data final arff file
 				BufferedReader buffReader = new BufferedReader(new FileReader(new File(metadataArffPath)));
 				String line;
@@ -216,6 +221,10 @@ public class MainCluster {
 				String detail = evaluation.toClassDetailsString();
 				bufferedWriter.write(clusterData.attribute(0).toString());
 				bufferedWriter.write("\n");
+				for(int i = 0; i < numOfCluster.size(); i++) {
+					bufferedWriter.write(i+" : ");
+					bufferedWriter.write(numofDeveloperC.get(i) + "\n");
+				}
 				bufferedWriter.write(attStats.toString());
 				bufferedWriter.write(strSummary);
 				bufferedWriter.write(detail);
