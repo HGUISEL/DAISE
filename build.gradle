@@ -27,6 +27,12 @@ mainClassName = "edu.handong.csee.isel.cluster.MainCluster"
 dependencies {
     // This dependency is exported to consumers, that is to say found on their compile classpath.
     api 'org.apache.commons:commons-math3:3.6.1'
+    
+    // https://mvnrepository.com/artifact/com.github.gumtreediff/gen.jdt
+	compile group: 'com.github.gumtreediff', name: 'gen.jdt', version: '2.1.0'
+	
+	// https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit
+	compile group: 'org.eclipse.jgit', name: 'org.eclipse.jgit', version: '5.6.0.201912101111-r'
 
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation 'com.google.guava:guava:28.1-jre'
