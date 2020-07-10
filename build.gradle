@@ -21,8 +21,8 @@ repositories {
 apply plugin: 'application'
 mainClassName = "edu.handong.csee.isel.cluster.MainCluster"
 
-apply plugin: 'application'
-mainClassName = "edu.handong.csee.isel.MainDAISE"
+//apply plugin: 'application'
+//mainClassName = "edu.handong.csee.isel.MainDAISE"
 
 dependencies {
     // This dependency is exported to consumers, that is to say found on their compile classpath.
