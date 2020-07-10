@@ -1,12 +1,15 @@
 package edu.handong.csee.isel.daise;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -14,6 +17,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.Repository;
@@ -31,7 +36,7 @@ public class MainD {
 	boolean help;
 	ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
 	public static HashMap<String,DeveloperInformation> developerInfo = new HashMap<String,DeveloperInformation>();//////이놈!!!
-
+	String projectName;
 	
 
 	public static void main(String[] args) throws Exception {
@@ -47,6 +52,12 @@ public class MainD {
 			if (help){
 				printHelp(options);
 				return;
+			}
+			
+			Pattern pattern = Pattern.compile(".+/(.+)");
+			Matcher matcher = pattern.matcher(gitRepositoryPath);
+			while(matcher.find()) {
+				projectName = matcher.group(1);
 			}
 			
 			Git git = Git.open(new File(gitRepositoryPath));
@@ -88,7 +99,6 @@ public class MainD {
 				if(istherejavafile == false) continue;
 				
 				String authorId = Utils.parseAuthorID(commit.getAuthorIdent().toString());
-				System.out.println(authorId);
 				
 				if(!developerInfo.containsKey(authorId)) {
 					developerInformation = new DeveloperInformation(commitTime);
@@ -101,26 +111,30 @@ public class MainD {
 				developerInformation.setNumofCommit();
 			}
 			
-			Set<Map.Entry<String, DeveloperInformation>> entries = developerInfo.entrySet();
-			for (Map.Entry<String,DeveloperInformation> entry : entries) {
-				String key = entry.getKey();
-
-				System.out.println(key);
-				
-				String start = entry.getValue().getStartDate();
-				String end = entry.getValue().endDate;
-				int num = entry.getValue().getNumofCommit();
-
-				System.out.println(start + "  " + end + "  " + num);
-
-				System.out.println("-----------------------------");
-			}
+			Save2CSV();
+			
+			//print Hashmap
+//			Set<Map.Entry<String, DeveloperInformation>> entries = developerInfo.entrySet();
+//			for (Map.Entry<String,DeveloperInformation> entry : entries) {
+//				String key = entry.getKey();
+//
+//				System.out.println(key);
+//				
+//				String start = entry.getValue().getStartDate();
+//				String end = entry.getValue().endDate;
+//				int num = entry.getValue().getNumofCommit();
+//
+//				System.out.println(start + "  " + end + "  " + num);
+//
+//				System.out.println("-----------------------------");
+//			}
 			
 			if(verbose) {
 				
 				// TODO list all files in the path
 				
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
+				
 			}
 		}
 	}
@@ -146,6 +160,28 @@ public class MainD {
 		}
 
 		return true;
+	}
+	
+	private void Save2CSV() throws Exception {
+		BufferedWriter writer;
+		writer = new BufferedWriter(new FileWriter(outputPath + File.separator + projectName + ".csv"));//.xlsx
+
+		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Developer E-mail","First Commit","Last Commit","Number of Commit"));
+		
+		Set<Map.Entry<String, DeveloperInformation>> entries = developerInfo.entrySet();
+		for (Map.Entry<String,DeveloperInformation> entry : entries) {
+			String key = entry.getKey();
+			
+			String first = entry.getValue().getStartDate();
+			String last = entry.getValue().getEndDate();
+			int num = entry.getValue().getNumofCommit();
+
+			csvPrinter.printRecord(key,first,last,num);
+		}
+		
+		csvPrinter.close();
+		writer.close();
+
 	}
 	
 	private Options createOptions() {
