@@ -19,7 +19,7 @@ repositories {
     jcenter()
 }
 apply plugin: 'application'
-mainClassName = "edu.handong.csee.isel.cluster.MainCluster"
+mainClassName = "edu.handong.csee.isel.cluster.MainD"
 
 //apply plugin: 'application'
 //mainClassName = "edu.handong.csee.isel.MainDAISE"
