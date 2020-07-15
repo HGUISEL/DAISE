@@ -38,7 +38,6 @@ public class MainD {
 	public static HashMap<String,DeveloperInformation> developerInfo = new HashMap<String,DeveloperInformation>();//////이놈!!!
 	String projectName;
 	
-
 	public static void main(String[] args) throws Exception {
 		MainD main = new MainD();
 		main.run(args);
@@ -111,6 +110,8 @@ public class MainD {
 				developerInformation.setNumofCommit();
 			}
 			
+			countActiveDeveloper();
+			
 			Save2CSV();
 			
 			//print Hashmap
@@ -137,6 +138,30 @@ public class MainD {
 				
 			}
 		}
+	}
+	
+	private void countActiveDeveloper() {
+		Set<Map.Entry<String, DeveloperInformation>> entries = developerInfo.entrySet();
+		
+		for (Map.Entry<String,DeveloperInformation> entry : entries) {
+			String key = entry.getKey();
+			
+			int num = entry.getValue().getNumofCommit();
+			if(num < 2) continue;//the developer have at least 10 commits
+			
+			String developerFirst = entry.getValue().getStartDate();
+			
+			for (Map.Entry<String,DeveloperInformation> developer : entries) {
+				if(key.equals(developer.getKey())) continue;
+				String first = developer.getValue().getStartDate();
+				String last = developer.getValue().getEndDate();
+				
+				if(developerFirst.compareTo(first) >= 0 && developerFirst.compareTo(last) <= 0) {
+					entry.getValue().setNumOfActiveDeveloper();
+				}
+			}
+		}
+		
 	}
 	
 	private boolean parseOptions(Options options, String[] args) {
@@ -166,7 +191,7 @@ public class MainD {
 		BufferedWriter writer;
 		writer = new BufferedWriter(new FileWriter(outputPath + File.separator + projectName + ".csv"));//.xlsx
 
-		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Developer E-mail","First Commit","Last Commit","Number of Commit"));
+		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("Developer E-mail","First Commit","Last Commit","Number of Commit","Number of active Dev","Ratio of active Dev"));
 		
 		Set<Map.Entry<String, DeveloperInformation>> entries = developerInfo.entrySet();
 		for (Map.Entry<String,DeveloperInformation> entry : entries) {
@@ -175,8 +200,10 @@ public class MainD {
 			String first = entry.getValue().getStartDate();
 			String last = entry.getValue().getEndDate();
 			int num = entry.getValue().getNumofCommit();
+			int avtiveDeveloper = entry.getValue().getNumOfActiveDeveloper();
+			float ratio = (float)avtiveDeveloper/(float)entries.size();
 
-			csvPrinter.printRecord(key,first,last,num);
+			csvPrinter.printRecord(key,first,last,num,avtiveDeveloper,ratio);
 		}
 		
 		csvPrinter.close();

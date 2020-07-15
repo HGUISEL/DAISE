@@ -4,11 +4,13 @@ public class DeveloperInformation {
 	String startDate;
 	String endDate;
 	int numofCommit;
+	int numOfActiveDeveloper;
 	
 	DeveloperInformation(String startDate){
 		this.startDate = startDate;
 		this.endDate = null;
 		this.numofCommit = 0;
+		this.numOfActiveDeveloper = 0;
 	}
 
 	public String getStartDate() {
@@ -33,6 +35,14 @@ public class DeveloperInformation {
 
 	public void setNumofCommit() {
 		this.numofCommit++;
+	}
+
+	public int getNumOfActiveDeveloper() {
+		return numOfActiveDeveloper;
+	}
+
+	public void setNumOfActiveDeveloper() {
+		this.numOfActiveDeveloper++;
 	}
 	
 }
