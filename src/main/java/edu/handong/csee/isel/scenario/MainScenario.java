@@ -5,6 +5,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +22,9 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 
 import edu.handong.csee.isel.DeveloperInfo;
@@ -135,127 +140,183 @@ public class MainScenario {
 			eval.setClusterer(em);
 			eval.evaluateClusterer(newData);
 			System.out.println(eval.clusterResultsToString()); //weka처럼 clustering 결과 볼 수 있
+			System.out.println();
+////////////////////////////////////////////////////////
+			//read test developer metric set
+			HashMap<String, ArrayList<TestMetaData>> testDeveloperMetrics = new HashMap<>();///
+			HashMap<String, ArrayList<TestMetaData>> accumulatedTestDeveloperMetrics = new HashMap<>();
+			TreeSet<String> commitTimes = new TreeSet<String>();///
 			
-			//(2) - 1 : make each developer cluster model
-			ArrayList<String> developer = new ArrayList<String>();
-			ArrayList<Integer> cluster = new ArrayList<Integer>();
-			TreeSet<Integer> numOfCluster = new TreeSet<Integer>();
-			int lengthOfInstance = 0;
-			
-			for (Instance inst : newData) {
-				 int index = developerInstanceCSV.indexOf(inst.toString()); //cluster number 
-				 
-				 developer.add(developerNameCSV.get(index));//save developer
-				 cluster.add(em.clusterInstance(inst));// save cluster of developer
-				 numOfCluster.add(em.clusterInstance(inst)); //number of developer each cluster
-				 lengthOfInstance++;
-//		         System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
-			}
-			 
-			//read training arff file
-			ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
-			ArrayList<String> dataLineList = new ArrayList<String>();
-			String firstDeveloperID = null;
-			int indexOfDeveloperID = 0;
-			
-			String content = FileUtils.readFileToString(trainMetrics, "UTF-8");
-			String[] lines = content.split("\n");
+			Reader in = new FileReader(metadataPath+File.separator+projectName+"_test_developer.csv");
+	        Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
 
-			boolean dataPart = false;
-			for (String line : lines) {
-				if (dataPart) {
-					dataLineList.add(line);
-					continue;
-					
-				}else if(!dataPart){
-					attributeLineList.add(line);
-					
-					if(line.startsWith("@attribute meta_data-AuthorID")) {
-						Matcher m = firstDeveloperIDPattern.matcher(line);
-						m.find();
-						firstDeveloperID = m.group(1);
-						indexOfDeveloperID = attributeLineList.size() - 3;
-					}
-					if (line.startsWith("@data")) {
-						dataPart = true;
-					}
-				}
-			}
-			
-			//divide training data to each cluster group
-			HashMap<Integer,ArrayList<String>> clusterInformation = new HashMap<Integer,ArrayList<String>>(); //cluster number, instance
-			
-			//init hashmap
-			for(int i = 0; i < numOfCluster.size(); i++) {
-				ArrayList<String> contents = new ArrayList<String>();
-				clusterInformation.put(i, contents);
-			}
-			
-			for(String line : dataLineList) {
-				int key;
-				if(!(line.contains(","+indexOfDeveloperID+" "))) {
-					key = cluster.get(developer.indexOf(firstDeveloperID));
+	        for (CSVRecord record : records) {
+	        	String commitTime = record.get("commitTime");
+	        	commitTimes.add(commitTime);
+	        	TestMetaData testMetaData = new TestMetaData(record);
+	        	
+	        	if(testDeveloperMetrics.containsKey(commitTime)) {
+	        		ArrayList<TestMetaData> testMetaDataArr = testDeveloperMetrics.get(commitTime);
+	        		testMetaDataArr.add(testMetaData);
+//	        		testDeveloperMetrics.put(commitTime, testMetaDataArr);??
+	        	}else {
+	        		ArrayList<TestMetaData> testMetaDataArr = new ArrayList<>();
+	        		testMetaDataArr.add(testMetaData);
+	        		testDeveloperMetrics.put(commitTime, testMetaDataArr);
+	        	}
+	        }
+	        
+	        //make test developer metrics for developer profiling
+	        HashMap<String, Integer> commitTime_cluster = new HashMap<>();////////////
+	        
+	        File classifyDir = new File(metadataPath +File.separator+projectName+"-classify"+File.separator);
+	        classifyDir.mkdir();
+	        String classifyDirPath = classifyDir.getAbsolutePath();
+
+	        for(String commitTime : commitTimes) {
+				File newFileD = new File(classifyDirPath + File.separator + commitTime + "-developer-metric.csv");
+				
+				String developerMetricPath = newFileD.getAbsolutePath();
+				
+				//make developer metrics csv file
+				ArrayList<TestMetaData> testMetaDataArr;
+				ArrayList<TestMetaData> contents = testDeveloperMetrics.get(commitTime);
+				String authorID = contents.get(0).getAuthorID();
+				
+				if(! (accumulatedTestDeveloperMetrics.containsKey(authorID))) {
+					testMetaDataArr = contents;
+					accumulatedTestDeveloperMetrics.put(authorID, testMetaDataArr);
 				}else {
-					key = cluster.get(findDeveloperCluster(line,developer));
-				}
-				ArrayList<String> contents = clusterInformation.get(key);
-				contents.add(line);
-				clusterInformation.put(key, contents);
-			}
-			
-			//make each cluster*.arff file
-			File clusterDir = new File(metadataPath +File.separator+projectName+"-clusters"+File.separator);
-			String directoryPath = clusterDir.getAbsolutePath();
-			clusterDir.mkdir();
-			
-			ArrayList<String> clusterPath = new ArrayList<String>();
-			
-			for(int key : clusterInformation.keySet()) {
-				File newCluster = new File(directoryPath +File.separator+ "cluster"+key+".arff");
-				clusterPath.add(newCluster.getAbsolutePath());
-			
-				StringBuffer newContentBuf = new StringBuffer();
-				ArrayList<String> contents = clusterInformation.get(key);
-				
-				for (String line : attributeLineList) {
-					newContentBuf.append(line + "\n");
-				}
-				for (String line : contents) {
-					newContentBuf.append(line + "\n");
+					testMetaDataArr = accumulatedTestDeveloperMetrics.get(authorID);
+					testMetaDataArr.addAll(contents);
 				}
 				
-				FileUtils.write(newCluster, newContentBuf.toString(), "UTF-8");
-			}
-			
-			//read developer metrics. key : commit time (sort)
-			
-			
-			//read test set
-			String content1 = FileUtils.readFileToString(testMetricsDeveloperHistory, "UTF-8");
-			
-			
-			HashMap<String, HashMap<String,String>> testSet = getTestSetFrom(content1);
-			
-//			TestMetaData testMetaData = Utils.readTestMetadataCSV(metadataPath + File.separator + projectName + "_test_developer.csv"); //testPrint(metaData);
+				makedeveloperMetricCSV(testMetaDataArr,developerMetricPath);
+				File testDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(developerMetricPath));
+				
+				Instances test = makeInstances(testDeveloperProfiling);
+				//evealuate cluster test set
+				eval.evaluateClusterer(test);//test set을 cluster로 분류한 것 !!!!
+//				System.out.println(eval.clusterResultsToString());
+				Instance test1 = test.get(0);
+				commitTime_cluster.put(commitTime, em.clusterInstance(test1));
+				testDeveloperProfiling.delete();
+	        }
+	        
+	        
+			////////////////////////////////////////////////////////
+			//(2) - 1 : make each developer cluster model
+//			ArrayList<String> developer = new ArrayList<String>();
+//			ArrayList<Integer> cluster = new ArrayList<Integer>();
+//			TreeSet<Integer> numOfCluster = new TreeSet<Integer>();
+//			int lengthOfInstance = 0;
+//			
+//			for (Instance inst : newData) {
+//				 int index = developerInstanceCSV.indexOf(inst.toString()); //cluster number 
+//				 
+//				 developer.add(developerNameCSV.get(index));//save developer
+//				 cluster.add(em.clusterInstance(inst));// save cluster of developer
+//				 numOfCluster.add(em.clusterInstance(inst)); //number of developer each cluster
+//				 lengthOfInstance++;
+////		         System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
+//			}
+//			 
+//			//read training arff file
+//			ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
+//			ArrayList<String> dataLineList = new ArrayList<String>();
+//			String firstDeveloperID = null;
+//			int indexOfDeveloperID = 0;
+//			
+//			String content = FileUtils.readFileToString(trainMetrics, "UTF-8");
+//			String[] lines = content.split("\n");
 //
-//			System.out.println(testMetaData.metrics);
-		
-			
-			
-			
+//			boolean dataPart = false;
+//			for (String line : lines) {
+//				if (dataPart) {
+//					dataLineList.add(line);
+//					continue;
+//					
+//				}else if(!dataPart){
+//					attributeLineList.add(line);
+//					
+//					if(line.startsWith("@attribute meta_data-AuthorID")) {
+//						Matcher m = firstDeveloperIDPattern.matcher(line);
+//						m.find();
+//						firstDeveloperID = m.group(1);
+//						indexOfDeveloperID = attributeLineList.size() - 3;
+//					}
+//					if (line.startsWith("@data")) {
+//						dataPart = true;
+//					}
+//				}
+//			}
+//			
+//			//divide training data to each cluster group
+//			HashMap<Integer,ArrayList<String>> clusterInformation = new HashMap<Integer,ArrayList<String>>(); //cluster number, instance
+//			
+//			//init hashmap
+//			for(int i = 0; i < numOfCluster.size(); i++) {
+//				ArrayList<String> contents = new ArrayList<String>();
+//				clusterInformation.put(i, contents);
+//			}
+//			
+//			for(String line : dataLineList) {
+//				int key;
+//				if(!(line.contains(","+indexOfDeveloperID+" "))) {
+//					key = cluster.get(developer.indexOf(firstDeveloperID));
+//				}else {
+//					key = cluster.get(findDeveloperCluster(line,developer));
+//				}
+//				ArrayList<String> contents = clusterInformation.get(key);
+//				contents.add(line);
+//				clusterInformation.put(key, contents);
+//			}
+//			
+//			//make each cluster*.arff file
+//			File clusterDir = new File(metadataPath +File.separator+projectName+"-clusters"+File.separator);
+//			String directoryPath = clusterDir.getAbsolutePath();
+//			clusterDir.mkdir();
+//			
+//			ArrayList<String> clusterPath = new ArrayList<String>();
+//			
+//			for(int key : clusterInformation.keySet()) {
+//				File newCluster = new File(directoryPath +File.separator+ "cluster"+key+".arff");
+//				clusterPath.add(newCluster.getAbsolutePath());
+//			
+//				StringBuffer newContentBuf = new StringBuffer();
+//				ArrayList<String> contents = clusterInformation.get(key);
+//				
+//				for (String line : attributeLineList) {
+//					newContentBuf.append(line + "\n");
+//				}
+//				for (String line : contents) {
+//					newContentBuf.append(line + "\n");
+//				}
+//				
+//				FileUtils.write(newCluster, newContentBuf.toString(), "UTF-8");
+//			}
+//			
+//			
+//			//read test set (defect prediction metric arff)
+//			String content1 = FileUtils.readFileToString(testMetricsDeveloperHistory, "UTF-8");
+//			
+//			HashMap<String, HashMap<String,String>> testSet = getTestSetFrom(content1);///
+//	        
 //			//apply classify algorithm each cluster
 //			for(int i = 0; i < clusterPath.size(); i++){
-//				String path = clusterPath.get(i);
-//				DataSource source = new DataSource(path);
-//				Instances clusterData = source.getDataSet();
-//				clusterData.setClassIndex(0);
+////				String path = clusterPath.get(i);
+////				DataSource source = new DataSource(path);
+////				Instances clusterData = source.getDataSet();
+////				clusterData.setClassIndex(0);
+////				
+////				AttributeStats attStats = clusterData.attributeStats(0);
+////				
+////				//make machine learning model
+////				System.out.println("Start classify");
+////				Classifier randomForest = new RandomForest();
+////				randomForest.buildClassifier(clusterData);
 //				
-//				AttributeStats attStats = clusterData.attributeStats(0);
-//				
-//				//make machine learning model
-//				Classifier randomForest = new RandomForest();
-//				randomForest.buildClassifier(clusterData);
-//				
+//				break;
 //				//test set evaluating
 ////				ClusterEvaluation eval = new ClusterEvaluation();
 ////				eval.setClusterer(em);
@@ -289,7 +350,29 @@ public class MainScenario {
 			}
 		}
 	}
-	
+
+	private Instances makeInstances(File testDeveloperProfiling) throws Exception {
+		// TODO Auto-generated method stub
+		CSVLoader loader = new CSVLoader();
+		loader.setSource(testDeveloperProfiling);
+		
+		Instances data = loader.getDataSet();
+		
+		int[] toSelect = new int[data.numAttributes()-1];
+		
+		for (int i = 0, j = 1; i < data.numAttributes()-1; i++,j++) {
+			toSelect[i] = j;
+		}
+		
+		Remove removeFilter = new Remove();
+		removeFilter.setAttributeIndicesArray(toSelect);
+		removeFilter.setInvertSelection(true);
+		removeFilter.setInputFormat(data);
+		Instances newData = Filter.useFilter(data, removeFilter);
+		
+		return newData;
+	}
+
 	int findDeveloperCluster(String line, ArrayList<String> developer) {
 		int cluster = 100;
 		
@@ -371,6 +454,41 @@ public class MainScenario {
 		}
 		
 		return testSet;
+	}
+	
+    void makedeveloperMetricCSV(ArrayList<TestMetaData> testMetaDataArr,String developerMetricPath) throws Exception {
+    	BufferedWriter writer = new BufferedWriter(new FileWriter(developerMetricPath));
+    	CSVPrinter csvPrinter = new CSVPrinter(writer, 
+    			CSVFormat.DEFAULT.withHeader("isBuggy","Modify Lines","Add Lines","Delete Lines","Distribution modified Lines","numOfBIC","AuthorID","fileAge","SumOfSourceRevision","SumOfDeveloper","CommitHour","CommitDate","AGE","numOfSubsystems","numOfDirectories","numOfFiles","NUC","developerExperience","REXP","LT","Key"));
+    	
+    	for(TestMetaData content : testMetaDataArr) {
+    		String isBuggy = content.getIsBuggy();
+    		String Modify_Lines = content.getModify_Lines();
+    		String Add_Lines = content.getAdd_Lines();
+    		String Delete_Lines = content.getDelete_Lines();
+    		String Distribution_modified_Lines = content.getDistribution_modified_Lines();
+    		String numOfBIC = content.getNumOfBIC();
+    		String AuthorID = content.getAuthorID();
+    		String fileAge = content.getFileAge();
+    		String SumOfSourceRevision = content.getSumOfSourceRevision();
+    		String SumOfDeveloper = content.getSumOfDeveloper();
+    		String CommitHour = content.getCommitHour();
+    		String CommitDate = content.getCommitDate();
+    		String AGE = content.getAGE();
+    		String numOfSubsystems = content.getNumOfSubsystems();
+    		String numOfDirectories = content.getNumOfDirectories();
+    		String numOfFiles = content.getNumOfFiles();
+    		String NUC = content.getNUC();
+    		String developerExperience = content.getDeveloperExperience();
+    		String REXP = content.getREXP();
+    		String LT = content.getLT();
+    		String Key = content.getKey();
+    		
+			csvPrinter.printRecord(isBuggy, Modify_Lines,Add_Lines,Delete_Lines,Distribution_modified_Lines,numOfBIC,AuthorID,fileAge,SumOfSourceRevision,SumOfDeveloper,CommitHour,CommitDate,AGE,numOfSubsystems,numOfDirectories,numOfFiles,NUC,developerExperience,REXP,LT,Key);
+    	}
+    	
+    	csvPrinter.close();
+    	writer.close();
 	}
 	
 	private Options createOptions() {
