@@ -7,6 +7,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,13 +22,21 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.io.FileUtils;
 
+import edu.handong.csee.isel.DeveloperInfo;
 import edu.handong.csee.isel.MainDAISE;
+import edu.handong.csee.isel.MetaData;
+import edu.handong.csee.isel.Utils;
+import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
+import weka.classifiers.trees.RandomForest;
 import weka.clusterers.ClusterEvaluation;
 import weka.clusterers.Clusterer;
 import weka.clusterers.EM;
+import weka.core.AttributeStats;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
+import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 
@@ -41,6 +52,13 @@ public class MainScenario {
 	
 	private final static String firstDeveloperIDPatternStr = ".+\\{'\\s([^,]+)',.+\\}"; 
 	private final static Pattern firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
+	
+	private final static String commitTimePatternStr = ",\\d+\\s'(.+)'";
+	private final static Pattern commitTimePattern = Pattern.compile(commitTimePatternStr);
+	
+	private final static String commitHashPatternStr = ",\\d+\\s(.+)";
+	private final static Pattern commitHashPattern = Pattern.compile(commitHashPatternStr);
+	
 	
 	public static void main(String[] args) throws Exception {
 		MainScenario main = new MainScenario();
@@ -63,12 +81,10 @@ public class MainScenario {
 			}
 			
 			File trainMetrics = new File(metadataPath +File.separator+ projectName + "-train-data.arff");
-			File testMetrics = new File(metadataPath +File.separator+ projectName + "-test-data.arff");
+			File testMetrics = new File(metadataPath +File.separator+ projectName + "-test-data.arff");//later
 			File testMetricsDeveloperHistory = new File(metadataPath +File.separator+ projectName + "-test-developer-data.arff");
 			
-			File trainDeveloperProfiling = new File(collectingDeveloperProfilingMetrics("train"));
-			File testDeveloperProfiling = new File(metadataPath +File.separator+ "_test_developer.csv");
-		
+			File trainDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(metadataPath +File.separator + projectName + "_train_developer.csv"));
 			
 			//(1) standard : make prediction model using training data set
 			
@@ -137,7 +153,7 @@ public class MainScenario {
 			}
 			 
 			//read training arff file
-			ArrayList<String> attributeLineList = new ArrayList<String>();
+			ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
 			ArrayList<String> dataLineList = new ArrayList<String>();
 			String firstDeveloperID = null;
 			int indexOfDeveloperID = 0;
@@ -188,7 +204,7 @@ public class MainScenario {
 			}
 			
 			//make each cluster*.arff file
-			File clusterDir = new File(outputPath+File.separator+projectName+"-clusters"+File.separator);
+			File clusterDir = new File(metadataPath +File.separator+projectName+"-clusters"+File.separator);
 			String directoryPath = clusterDir.getAbsolutePath();
 			clusterDir.mkdir();
 			
@@ -210,6 +226,44 @@ public class MainScenario {
 				
 				FileUtils.write(newCluster, newContentBuf.toString(), "UTF-8");
 			}
+			
+			//read developer metrics. key : commit time (sort)
+			
+			
+			//read test set
+			String content1 = FileUtils.readFileToString(testMetricsDeveloperHistory, "UTF-8");
+			
+			
+			HashMap<String, HashMap<String,String>> testSet = getTestSetFrom(content1);
+			
+//			TestMetaData testMetaData = Utils.readTestMetadataCSV(metadataPath + File.separator + projectName + "_test_developer.csv"); //testPrint(metaData);
+//
+//			System.out.println(testMetaData.metrics);
+		
+			
+			
+			
+//			//apply classify algorithm each cluster
+//			for(int i = 0; i < clusterPath.size(); i++){
+//				String path = clusterPath.get(i);
+//				DataSource source = new DataSource(path);
+//				Instances clusterData = source.getDataSet();
+//				clusterData.setClassIndex(0);
+//				
+//				AttributeStats attStats = clusterData.attributeStats(0);
+//				
+//				//make machine learning model
+//				Classifier randomForest = new RandomForest();
+//				randomForest.buildClassifier(clusterData);
+//				
+//				//test set evaluating
+////				ClusterEvaluation eval = new ClusterEvaluation();
+////				eval.setClusterer(em);
+////				eval.evaluateClusterer(newData);
+////				System.out.println(eval.clusterResultsToString());
+//				
+//				
+//			}
 			
 			//(3) test
 			
@@ -266,24 +320,57 @@ public class MainScenario {
 		return true;
 	}
 	
-	private String collectingDeveloperProfilingMetrics(String mode) throws Exception {
+	private String collectingDeveloperProfilingMetrics(String path) throws Exception {
 		String[] DAISEargs = new String[4];
 		
-		if(mode.equals("train")){
-			DAISEargs[0] = "-m";
-			DAISEargs[1] = metadataPath +File.separator + projectName + "_train_developer.csv";
-			DAISEargs[2] = "-o";
-			DAISEargs[3] = metadataPath.toString();
-		}else if (mode.equals("test")){
-			DAISEargs[0] = "-m";
-			DAISEargs[1] = metadataPath +File.separator+ projectName + "_test_developer.csv";
-			DAISEargs[2] = "-o";
-			DAISEargs[3] = metadataPath.toString();
-		}
+		DAISEargs[0] = "-m";
+		DAISEargs[1] = path;
+		DAISEargs[2] = "-o";
+		DAISEargs[3] = metadataPath.toString();
 		
 		MainDAISE DAISEmain = new MainDAISE();
 		DAISEmain.run(DAISEargs);
 		return DAISEmain.getOutpuCSV();
+	}
+	
+	HashMap<String, HashMap<String,String>> getTestSetFrom(String content){
+		HashMap<String, HashMap<String,String>> testSet = new HashMap<String, HashMap<String,String>>();
+		
+		String[] lines = content.split("\n");
+		
+		HashMap<String,String> testSetContents = new HashMap<String,String>();
+		String commitHashSource;
+		String commitTime;
+		Matcher m;
+		boolean dataPart = false;
+		
+		for (String line : lines) {
+			if(!dataPart) {
+				if (line.startsWith("@data")) {
+					dataPart = true;
+				}
+				continue;
+			}
+			
+			commitHashSource = line.substring(line.lastIndexOf(','),line.lastIndexOf('}'));
+			m = commitHashPattern.matcher(commitHashSource);
+			m.find();
+			commitHashSource = m.group(1);
+			
+			line = line.substring(0, line.lastIndexOf(','));
+			
+			commitTime = line.substring(line.lastIndexOf(','),line.length());
+			m = commitTimePattern.matcher(commitTime);
+			m.find();
+			commitTime = m.group(1);
+			
+			line = line.substring(0, line.lastIndexOf(',')) + "}";
+			
+			testSetContents.put(commitHashSource, line);
+			testSet.put(commitTime, testSetContents);
+		}
+		
+		return testSet;
 	}
 	
 	private Options createOptions() {
