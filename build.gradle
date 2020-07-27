@@ -46,6 +46,9 @@ dependencies {
     // https://mvnrepository.com/artifact/commons-cli/commons-cli
 	compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
 
+	// https://mvnrepository.com/artifact/commons-io/commons-io
+	compile group: 'commons-io', name: 'commons-io', version: '2.5'
+	
     // https://mvnrepository.com/artifact/org.apache.commons/commons-csv
     compile group: 'org.apache.commons', name: 'commons-csv', version: '1.7'
 
