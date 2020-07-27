@@ -1,8 +1,10 @@
 package edu.handong.csee.isel.scenario;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeSet;
@@ -159,41 +161,55 @@ public class MainScenario {
 						indexOfDeveloperID = attributeLineList.size() - 3;
 					}
 					if (line.startsWith("@data")) {
-						attributeLineList.add("\n@data");
 						dataPart = true;
 					}
 				}
 			}
 			
 			//divide training data to each cluster group
-			HashMap<Integer,String> clusterInformation = new HashMap<Integer,String>(); //cluster number, instance
+			HashMap<Integer,ArrayList<String>> clusterInformation = new HashMap<Integer,ArrayList<String>>(); //cluster number, instance
 			
-//			for(int i = 0; i < dataLineList.size(); i++) {
-//				System.out.println(dataLineList.get(i));
-//				
-//				String developerID = dataLineList.get(i).substring(,);
-//				break;
-//			}
+			//init hashmap
+			for(int i = 0; i < numOfCluster.size(); i++) {
+				ArrayList<String> contents = new ArrayList<String>();
+				clusterInformation.put(i, contents);
+			}
 			
 			for(String line : dataLineList) {
+				int key;
 				if(!(line.contains(","+indexOfDeveloperID+" "))) {
-					int key = cluster.get(developer.indexOf(firstDeveloperID));
-					clusterInformation.put(key, line);
+					key = cluster.get(developer.indexOf(firstDeveloperID));
 				}else {
-					int key = cluster.get(findDeveloperCluster(line,developer));
-					clusterInformation.put(key, line);
+					key = cluster.get(findDeveloperCluster(line,developer));
 				}
+				ArrayList<String> contents = clusterInformation.get(key);
+				contents.add(line);
+				clusterInformation.put(key, contents);
 			}
 			
 			//make each cluster*.arff file
-//			File clusterDir = new File(outputPath+File.separator+projectName+"-clusters"+File.separator);
-//			clusterDir.mkdir();
-//			
-//			ArrayList<String> clusterName = new ArrayList<String>();
-//			
-//			 
-//			File newCluster = new File(referencePath + File.separator + projectName +"-train-data.arff");
-//			
+			File clusterDir = new File(outputPath+File.separator+projectName+"-clusters"+File.separator);
+			String directoryPath = clusterDir.getAbsolutePath();
+			clusterDir.mkdir();
+			
+			ArrayList<String> clusterPath = new ArrayList<String>();
+			
+			for(int key : clusterInformation.keySet()) {
+				File newCluster = new File(directoryPath +File.separator+ "cluster"+key+".arff");
+				clusterPath.add(newCluster.getAbsolutePath());
+			
+				StringBuffer newContentBuf = new StringBuffer();
+				ArrayList<String> contents = clusterInformation.get(key);
+				
+				for (String line : attributeLineList) {
+					newContentBuf.append(line + "\n");
+				}
+				for (String line : contents) {
+					newContentBuf.append(line + "\n");
+				}
+				
+				FileUtils.write(newCluster, newContentBuf.toString(), "UTF-8");
+			}
 			
 			//(3) test
 			
