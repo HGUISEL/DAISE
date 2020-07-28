@@ -1,17 +1,13 @@
 package edu.handong.csee.isel.scenario;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -28,10 +24,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 
-import edu.handong.csee.isel.DeveloperInfo;
 import edu.handong.csee.isel.MainDAISE;
-import edu.handong.csee.isel.MetaData;
-import edu.handong.csee.isel.Utils;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.trees.RandomForest;
@@ -87,7 +80,6 @@ public class MainScenario {
 			}
 
 			File trainMetrics = new File(metadataPath +File.separator+ projectName + "-train-data.arff");
-			File testMetrics = new File(metadataPath +File.separator+ projectName + "-test-data.arff");//later
 			File testMetricsDeveloperHistory = new File(metadataPath +File.separator+ projectName + "-test-developer-data.arff");
 
 			File trainDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(metadataPath +File.separator + projectName + "_train_developer.csv"));
@@ -327,13 +319,12 @@ public class MainScenario {
 				ArrayList<String> clusterCommitTime = getKey(commitTime_cluster,i);
 				
 				for(String eachCommitTime : clusterCommitTime) {
-					System.out.println(eachCommitTime);
+
 					HashMap<String,String> commitTimeTestSet = testSet.get(eachCommitTime);
 					for(String key : commitTimeTestSet.keySet()) { //commitHash,arff
 						String aTestData = testSet.get(eachCommitTime).get(key);
 						
 						System.out.println(key);
-						System.out.println(eachCommitTime);
 						
 						File newFileT = new File(classifyDirPath + File.separator + eachCommitTime + "-test-metric.arff");
 						String testMetricPath = newFileT.getAbsolutePath();
@@ -533,14 +524,14 @@ public class MainScenario {
 		HashMap<String, HashMap<String,String>> testSet = new HashMap<String, HashMap<String,String>>();
 
 		String[] lines = content.split("\n");
-
-		HashMap<String,String> testSetContents = new HashMap<String,String>();
 		String commitHashSource;
 		String commitTime;
 		Matcher m;
 		boolean dataPart = false;
 
 		for (String line : lines) {
+			HashMap<String,String> testSetContents = new HashMap<String,String>();
+			
 			if(!dataPart) {
 				if (line.startsWith("@data")) {
 					dataPart = true;
