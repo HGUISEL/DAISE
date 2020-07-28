@@ -139,7 +139,6 @@ public class MainScenario {
 			ArrayList<String> developer = new ArrayList<String>();
 			ArrayList<Integer> cluster = new ArrayList<Integer>();
 			TreeSet<Integer> numOfCluster = new TreeSet<Integer>();
-			int lengthOfInstance = 0;
 
 			for (Instance inst : newData) {
 				int index = developerInstanceCSV.indexOf(inst.toString()); //cluster number 
@@ -147,7 +146,6 @@ public class MainScenario {
 				developer.add(developerNameCSV.get(index));//save developer
 				cluster.add(em.clusterInstance(inst));// save cluster of developer
 				numOfCluster.add(em.clusterInstance(inst)); //number of developer each cluster
-				lengthOfInstance++;
 				//		         System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
 			}
 
@@ -182,13 +180,7 @@ public class MainScenario {
 			}
 
 			//divide training data to each cluster group
-			HashMap<Integer,ArrayList<String>> clusterInformation = new HashMap<Integer,ArrayList<String>>(); //cluster number, instance
-
-			//init hashmap
-			for(int i = 0; i < numOfCluster.size(); i++) {
-				ArrayList<String> contents = new ArrayList<String>();
-				clusterInformation.put(i, contents);
-			}
+			HashMap<Integer,ArrayList<String>> clusterInformation = initClusterInformationHashMap(numOfCluster.size()); //cluster number, instance
 
 			for(String line : dataLineList) {
 				int key;
@@ -230,7 +222,7 @@ public class MainScenario {
 			//read test set (defect prediction metric arff)
 			String content1 = FileUtils.readFileToString(testMetricsDeveloperHistory, "UTF-8");
 
-			HashMap<String, HashMap<String,String>> testSet = getTestSetFrom(content1);///commitTime <commithash, dataLine>
+			HashMap<String, ArrayList<TestSetInfo>> testSet = getTestSetFrom(content1);///commitTime <commithash, dataLine>
 
 			////////////////////////////////////////////////////////
 			//read test developer metric set
@@ -319,10 +311,11 @@ public class MainScenario {
 				ArrayList<String> clusterCommitTime = getKey(commitTime_cluster,i);
 				
 				for(String eachCommitTime : clusterCommitTime) {
-
-					HashMap<String,String> commitTimeTestSet = testSet.get(eachCommitTime);
-					for(String key : commitTimeTestSet.keySet()) { //commitHash,arff
-						String aTestData = testSet.get(eachCommitTime).get(key);
+					
+					ArrayList<TestSetInfo> commitTimeTestSets = testSet.get(eachCommitTime);
+					for(TestSetInfo commitTimeTestSet : commitTimeTestSets) { //commitHash,arff
+						String aTestData = commitTimeTestSet.getData();
+						String key = commitTimeTestSet.getCommitHashSource();
 						
 						System.out.println(key);
 						
@@ -393,6 +386,17 @@ public class MainScenario {
 
 			}
 		}
+	}
+
+	private HashMap<Integer, ArrayList<String>> initClusterInformationHashMap(int numberOfCluster) {
+		HashMap<Integer,ArrayList<String>> clusterInformation = new HashMap<Integer,ArrayList<String>>(); //cluster number, instance
+
+		//init hashmap : num of cluster
+		for(int i = 0; i < numberOfCluster; i++) {
+			ArrayList<String> contents = new ArrayList<String>();
+			clusterInformation.put(i, contents);
+		}
+		return clusterInformation;
 	}
 
 	private void Save2CSV(HashMap<String, DBPDResult> reuslts) throws Exception {
@@ -520,17 +524,16 @@ public class MainScenario {
 		return DAISEmain.getOutpuCSV();
 	}
 
-	HashMap<String, HashMap<String,String>> getTestSetFrom(String content){
-		HashMap<String, HashMap<String,String>> testSet = new HashMap<String, HashMap<String,String>>();
+	HashMap<String, ArrayList<TestSetInfo>> getTestSetFrom(String content){
+		HashMap<String, ArrayList<TestSetInfo>> testSet = new HashMap<>();
 
 		String[] lines = content.split("\n");
 		String commitHashSource;
 		String commitTime;
 		Matcher m;
 		boolean dataPart = false;
-
+		
 		for (String line : lines) {
-			HashMap<String,String> testSetContents = new HashMap<String,String>();
 			
 			if(!dataPart) {
 				if (line.startsWith("@data")) {
@@ -552,9 +555,17 @@ public class MainScenario {
 			commitTime = m.group(1);
 
 			line = line.substring(0, line.lastIndexOf(',')) + "}";
-
-			testSetContents.put(commitHashSource, line);
-			testSet.put(commitTime, testSetContents);
+			
+			TestSetInfo testSetInfo = new TestSetInfo(commitHashSource,line);
+			
+			if(testSet.containsKey(commitTime)) {
+				ArrayList<TestSetInfo> testSetInfos = testSet.get(commitTime);
+				testSetInfos.add(testSetInfo);
+			}else {
+				ArrayList<TestSetInfo> testSetInfos = new ArrayList<>();
+				testSetInfos.add(testSetInfo);
+				testSet.put(commitTime, testSetInfos);
+			}
 		}
 
 		return testSet;
