@@ -10,6 +10,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -304,7 +305,7 @@ public class MainScenario {
 
 
 			////////////////////////////////////////////////////////
-
+			HashMap<String, DBPDResult> reuslts = new HashMap<>(); 
 
 
 			//apply classify algorithm each cluster
@@ -321,14 +322,19 @@ public class MainScenario {
 				Classifier randomForest = new RandomForest();
 				randomForest.buildClassifier(clusterData);
 				System.out.println("End classify");
+				
 				//make test arff file
 				ArrayList<String> clusterCommitTime = getKey(commitTime_cluster,i);
 				
 				for(String eachCommitTime : clusterCommitTime) {
-					
-					for(String key : testSet.get(eachCommitTime).keySet()) { //commitHash,arff
+					System.out.println(eachCommitTime);
+					HashMap<String,String> commitTimeTestSet = testSet.get(eachCommitTime);
+					for(String key : commitTimeTestSet.keySet()) { //commitHash,arff
 						String aTestData = testSet.get(eachCommitTime).get(key);
+						
 						System.out.println(key);
+						System.out.println(eachCommitTime);
+						
 						File newFileT = new File(classifyDirPath + File.separator + eachCommitTime + "-test-metric.arff");
 						String testMetricPath = newFileT.getAbsolutePath();
 						StringBuffer newContentBuf = new StringBuffer();
@@ -345,25 +351,33 @@ public class MainScenario {
 						DataSource testsource = new DataSource(testMetricPath);
 						Instances testdata = testsource.getDataSet();
 						testdata.setClassIndex(0);
-						System.out.println("attribute "+testdata.attribute(0));
+//						System.out.println("attribute "+testdata.get(0).stringValue(testdata.attribute("@@class@@")));
+//						System.out.println("attribute "+testdata.get(0).stringValue(testdata.attribute("meta_data-AuthorID")));
+
 						Evaluation evalClassify = new Evaluation(clusterData);
 						evalClassify.evaluateModel(randomForest, testdata);
-						System.out.println(evalClassify.toSummaryString("\nResults\n======\n", false));
-						System.out.println("attStats");
-						System.out.println(attStats.toString());
-						System.out.println("toClassDetailsString");
-						System.out.println(evalClassify.toClassDetailsString());
-						System.out.println();
+//						System.out.println(evalClassify.toSummaryString("\nResults\n======\n", false));
+//						System.out.println("attStats");
+//						System.out.println(attStats.toString());
+//						System.out.println("toClassDetailsString");
+//						System.out.println(evalClassify.toClassDetailsString());
+//						System.out.println();
+						
+						DBPDResult DBPD = new DBPDResult();
+						DBPD.setCommitTime(eachCommitTime);
+						DBPD.setRealLabel(testdata.get(0).stringValue(testdata.attribute("@@class@@")));
+						DBPD.setAuthorID(testdata.get(0).stringValue(testdata.attribute("meta_data-AuthorID")));
+						DBPD.setCorrect(findRealLabel(evalClassify.toSummaryString()));
+						DBPD.setCluster(i);
+						reuslts.put(key,DBPD);
 						
 						newFileT.delete();
 					}
-					break;
 				}
-
-				break;
-
-
 			}
+			
+			//save result to CSV
+			Save2CSV(reuslts);
 
 			//(3) test
 
@@ -387,6 +401,54 @@ public class MainScenario {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 
 			}
+		}
+	}
+
+	private void Save2CSV(HashMap<String, DBPDResult> reuslts) throws Exception {
+		BufferedWriter writer = new BufferedWriter(new FileWriter( new File(outputPath+ File.separator + projectName + "-result.csv")));
+		CSVPrinter csvPrinter = new CSVPrinter(writer, 
+				CSVFormat.DEFAULT.withHeader("Cluster","Key","Commit Time","Author ID","P Label","R Label"));
+		
+		Set<Map.Entry<String, DBPDResult>> entries = reuslts.entrySet();
+		
+		for (Map.Entry<String,DBPDResult> entry : entries) {
+			String key = entry.getKey();
+			int cluster = entry.getValue().getCluster();
+			String commitTime = entry.getValue().getCommitTime();
+			String authorID = entry.getValue().getAuthorID();
+			String realLabel = entry.getValue().getRealLabel();
+			boolean isCorrect = entry.getValue().isCorrect;
+			String predictionLabel = setPredictionLable(realLabel,isCorrect);
+			
+			csvPrinter.printRecord(cluster,key,commitTime,authorID,predictionLabel,realLabel);
+		}
+		
+		csvPrinter.close();
+	}
+
+	private String setPredictionLable(String realLabel, boolean isCorrect) {
+		if(realLabel.equals("clean") && isCorrect == true) {
+			return "clean";
+		}else if(realLabel.equals("buggy") && isCorrect == true) {
+			return "buggy";
+		}else if(realLabel.equals("clean") && isCorrect == false) {
+			return "buggy";
+		}else if(realLabel.equals("buggy") && isCorrect == false) {
+			return "clean";
+		}
+		return "null";
+	}
+
+	private boolean findRealLabel(String summaryString) {
+		String[] lines = summaryString.split("\n");
+
+		if(lines[1].startsWith("Correctly") && lines[1].contains("100")) {
+			return true;
+		}else if(lines[1].startsWith("Correctly") && lines[1].contains("0")) {
+			return false;
+		}else {
+			System.out.println("There are no line?");
+			return false;
 		}
 	}
 
