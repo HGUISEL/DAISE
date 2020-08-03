@@ -31,7 +31,6 @@ import weka.classifiers.trees.RandomForest;
 import weka.clusterers.ClusterEvaluation;
 import weka.clusterers.Clusterer;
 import weka.clusterers.EM;
-import weka.core.AttributeStats;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
@@ -247,6 +246,8 @@ public class MainScenario {
 					testMetaDataArr.add(testMetaData);
 					testDeveloperMetrics.put(commitTime, testMetaDataArr);
 				}
+				
+				
 			}
 
 			//make test developer metrics for developer profiling
@@ -256,35 +257,46 @@ public class MainScenario {
 			classifyDir.mkdir();
 			String classifyDirPath = classifyDir.getAbsolutePath();
 
-			for(String commitTime : commitTimes) {
-				File newFileD = new File(classifyDirPath + File.separator + commitTime + "-developer-metric.csv");
-				String developerMetricPath = newFileD.getAbsolutePath();
+			int j = 0;
+			for(String commitTime : commitTimes) {//read commitTime last -> recent order
 				
 				//make developer metrics csv file
-				ArrayList<TestMetaData> testMetaDataArr;
 				ArrayList<TestMetaData> contents = testDeveloperMetrics.get(commitTime);
-				String authorID = contents.get(0).getAuthorID();
-
-				if(! (accumulatedTestDeveloperMetrics.containsKey(authorID))) {
-					testMetaDataArr = contents;
-					accumulatedTestDeveloperMetrics.put(authorID, testMetaDataArr);
-				}else {
-					testMetaDataArr = accumulatedTestDeveloperMetrics.get(authorID);
-					testMetaDataArr.addAll(contents);
+				TreeSet<String> authorID = new TreeSet<>();
+				
+				for(int i = 0; i < contents.size(); i++) {
+					authorID.add(contents.get(i).getAuthorID());
 				}
+				
+				for(String aAutorID : authorID) {
+					File newFileD = new File(classifyDirPath + File.separator + commitTime + aAutorID + "-developer-metric.csv");
+					String developerMetricPath = newFileD.getAbsolutePath();
+					ArrayList<TestMetaData> testMetaDataArr;
+					
+					if(! (accumulatedTestDeveloperMetrics.containsKey(aAutorID))) {
+						testMetaDataArr = new ArrayList<>();
+						accumulatedTestDeveloperMetrics.put(aAutorID, testMetaDataArr);
+					}
+					
+					testMetaDataArr = accumulatedTestDeveloperMetrics.get(aAutorID);
+					for(TestMetaData aData : contents) {
+						if(aData.getAuthorID().equals(aAutorID))
+							testMetaDataArr.add(aData);
+					}
+					
+					makedeveloperMetricCSV(testMetaDataArr,developerMetricPath);
+					File testDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(developerMetricPath));
 
-				makedeveloperMetricCSV(testMetaDataArr,developerMetricPath);
-				File testDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(developerMetricPath));
+					Instances test = makeInstances(testDeveloperProfiling);
 
-				Instances test = makeInstances(testDeveloperProfiling);
-
-				//evealuate cluster test set
-				eval.evaluateClusterer(test);//test set을 cluster로 분류한 것 !!!!
-				//System.out.println(eval.clusterResultsToString());
-				Instance test1 = test.get(0);
-				//if(test.size() > 1) System.out.println(test.size());
-				commitTime_cluster.put(commitTime, em.clusterInstance(test1));
-				testDeveloperProfiling.delete();
+					//evealuate cluster test set
+					eval.evaluateClusterer(test);//test set을 cluster로 분류한 것 !!!!
+					//System.out.println(eval.clusterResultsToString());
+					Instance test1 = test.get(0);
+					//if(test.size() > 1) System.out.println(test.size());
+					commitTime_cluster.put(commitTime, em.clusterInstance(test1));
+					testDeveloperProfiling.delete();
+				}
 			}
 
 
@@ -298,8 +310,6 @@ public class MainScenario {
 				DataSource source = new DataSource(path);
 				Instances clusterData = source.getDataSet();
 				clusterData.setClassIndex(0);
-				
-				AttributeStats attStats = clusterData.attributeStats(0);
 				
 				//make machine learning model
 				System.out.println("Start classify");
@@ -422,6 +432,7 @@ public class MainScenario {
 	}
 
 	private String setPredictionLable(String realLabel, boolean isCorrect) {
+//		System.out.println("realLabel : " +realLabel + "  isCorrect : "+ isCorrect);
 		if(realLabel.equals("clean") && isCorrect == true) {
 			return "clean";
 		}else if(realLabel.equals("buggy") && isCorrect == true) {
@@ -460,7 +471,6 @@ public class MainScenario {
 	}
 
 	private Instances makeInstances(File testDeveloperProfiling) throws Exception {
-		// TODO Auto-generated method stub
 		CSVLoader loader = new CSVLoader();
 		loader.setSource(testDeveloperProfiling);
 
