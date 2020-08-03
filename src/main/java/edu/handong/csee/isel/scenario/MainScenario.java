@@ -147,6 +147,11 @@ public class MainScenario {
 				numOfCluster.add(em.clusterInstance(inst)); //number of developer each cluster
 				//		         System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
 			}
+			
+			if(numOfCluster.size() == 1) {
+				File warning = new File(metadataPath +File.separator+projectName+"-OnlyOneCluster");
+		        System.exit(0);
+			}
 
 			//read training arff file
 			ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
@@ -323,6 +328,7 @@ public class MainScenario {
 				for(String eachCommitTime : clusterCommitTime) {
 					
 					ArrayList<TestSetInfo> commitTimeTestSets = testSet.get(eachCommitTime);
+					if(commitTimeTestSets == null) continue;
 					for(TestSetInfo commitTimeTestSet : commitTimeTestSets) { //commitHash,arff
 						String aTestData = commitTimeTestSet.getData();
 						String key = commitTimeTestSet.getCommitHashSource();
