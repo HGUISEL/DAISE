@@ -262,7 +262,6 @@ public class MainScenario {
 			classifyDir.mkdir();
 			String classifyDirPath = classifyDir.getAbsolutePath();
 
-			int j = 0;
 			for(String commitTime : commitTimes) {//read commitTime last -> recent order
 				
 				//make developer metrics csv file
@@ -287,6 +286,10 @@ public class MainScenario {
 					for(TestMetaData aData : contents) {
 						if(aData.getAuthorID().equals(aAutorID))
 							testMetaDataArr.add(aData);
+					}
+					
+					if(testMetaDataArr == null) {
+						System.out.println(aAutorID + " commitTime : "+commitTime);
 					}
 					
 					makedeveloperMetricCSV(testMetaDataArr,developerMetricPath);

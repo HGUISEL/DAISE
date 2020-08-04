@@ -3,29 +3,6 @@ package edu.handong.csee.isel.scenario;
 import org.apache.commons.csv.CSVRecord;
 
 public class TestMetaData {
-	
-//	boolean isBuggy;
-//	float Modify_Lines;
-//	float Add_Lines;
-//	float Delete_Lines;
-//	int Distribution_modified_Lines;
-//	int numOfBIC;
-//	String AuthorID;
-//	int fileAge;
-//	int SumOfSourceRevision;
-//	int SumOfDeveloper;
-//	int CommitHour;
-//	String CommitDate;
-//	int AGE;
-//	int numOfSubsystems;
-//	int numOfDirectories;
-//	int numOfFiles;
-//	float NUC;
-//	int developerExperience;
-//	float REXP;
-//	int LT;
-//	String Key;
-	
 	String isBuggy;
 	String Modify_Lines;
 	String Add_Lines;
