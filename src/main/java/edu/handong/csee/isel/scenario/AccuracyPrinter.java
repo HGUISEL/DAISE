@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -21,12 +23,12 @@ public class AccuracyPrinter {
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		calAccuracy(args[0],args[3]);
-		JITdefectPrediction(args[1],args[2],args[3]);
+//		JITdefectPrediction(args[1],args[2],args[3]);
 	}
 	
 	private static void JITdefectPrediction(String train, String test, String output) throws Exception {
 		// TODO Auto-generated method stub
-		
+		///data/DBPD/maven-reference/maven-train-data.arff /data/DBPD/maven-reference/maven-test-data.arff /data/DBPD
 		
 		DataSource trainSource = new DataSource(train);
 		Instances trainData = trainSource.getDataSet();
@@ -59,6 +61,9 @@ public class AccuracyPrinter {
 	}
 
 	static void calAccuracy(String path, String output) throws Exception {
+		int numOfdefect = 0;
+		int numOfInstance = 0;
+		
 		int bTruePositive = 0;
 		int bFalsePositive = 0;
 		int bFalseNegative = 0;
@@ -75,16 +80,71 @@ public class AccuracyPrinter {
 
 		for (CSVRecord record : records) {
 			DBPDResult data = new DBPDResult(record);
-			//buggy value calculate
-			saveValue("buggy",bTruePositive, bFalsePositive, bFalseNegative, bTrueNegative);
+			
+			//buggy and clean value calculate
+			if(data.getPredictLabel().equals("buggy")) {
+				if(data.getRealLabel().equals("buggy")) {
+					bTruePositive++; 						//real : buggy prediction : buggy
+					cTrueNegative++;
+				}else {
+					bFalsePositive++;						//real : clean prediction : buggy
+					cFalseNegative++;
+					numOfdefect++;
+				}
+			}else { //data.getPredictLabel().equals clean
+				if(data.getRealLabel().equals("clean")) {
+					bTrueNegative++;						//real : clean prediction : clean
+					cTruePositive++;
+				}else {
+					bFalseNegative++;						//real : buggy prediction : clean
+					cFalsePositive++;
+					numOfdefect++;
+				}
+			}
+			
+			numOfInstance++;
 		}
 		
-	}
-
-	private static void saveValue(String string, int bTruePositive, int bFalsePositive, int bFalseNegative,
-			int bTrueNegative) {
-		// TODO Auto-generated method stub
-		String label = string;
+		//cal Precision
+		float denominator;
+		float numerator;
+		
+		denominator = (float)(bTruePositive + bFalsePositive);
+		float bPrecision = (float)bTruePositive / denominator;
+		
+		denominator = (float)(cTruePositive + cFalsePositive);
+		float cPrecision = (float)cTruePositive / denominator;
+		
+		//cal Recall
+		denominator = (float)(bTruePositive / bFalseNegative);
+		float bRecall = (float)bTruePositive / denominator;
+		
+		denominator = (float)(cTruePositive / cFalseNegative);
+		float cRecall = (float)cTruePositive / denominator;
+		
+		//cal F1 score
+		denominator = bPrecision + bRecall;
+		numerator = bPrecision * bRecall;
+		float bF1score = (numerator/denominator) * 2;
+		
+		denominator = cPrecision + cRecall;
+		numerator = cPrecision * cRecall;
+		float cF1score = (numerator/denominator) * 2;
+		
+		
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(output + "/developer-result-main.txt")));
+		bufferedWriter.write("All Test Instance / All Tets Defect :\n");
+		bufferedWriter.write(numOfInstance + " / " + numOfdefect + "\n");
+		bufferedWriter.write("buggy\n");
+		bufferedWriter.write("Recall : "+bRecall+"\n");
+		bufferedWriter.write("Precision : "+ bPrecision + "\n");
+		bufferedWriter.write("F1 score : " + bF1score + "\n");
+		bufferedWriter.write("----------------------------------");
+		bufferedWriter.write("clean\n");
+		bufferedWriter.write("Recall : "+cRecall+"\n");
+		bufferedWriter.write("Precision : "+ cPrecision + "\n");
+		bufferedWriter.write("F1 score : " + cF1score + "\n");
+		
 	}
 
 }
