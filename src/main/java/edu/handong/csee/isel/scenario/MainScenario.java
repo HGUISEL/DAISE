@@ -41,6 +41,8 @@ import weka.filters.unsupervised.attribute.Remove;
 public class MainScenario {
 	String metadataPath;
 	String outputPath;
+	boolean accuracy;
+	boolean jit;
 	boolean verbose;
 	boolean help;
 	String projectName;
@@ -82,10 +84,6 @@ public class MainScenario {
 			File testMetricsDeveloperHistory = new File(metadataPath +File.separator+ projectName + "-test-developer-data.arff");
 
 			File trainDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(metadataPath +File.separator + projectName + "_train_developer.csv"));
-
-			//(1) standard : make prediction model using training data set
-
-			//(1) - 1 : test (1)'s prediction model using test data set
 
 
 			//(2) make developer cluster(incubator-hivemall_train_developer.csv)
@@ -381,24 +379,16 @@ public class MainScenario {
 			
 			//save result to CSV
 			Save2CSV(reuslts);
-
-			//(3) test
-
-			//(3) - 1 test : all is new developer
-
-			// (4) find developer cluster
-			// (4) - 1 put a commit information (using commitTime) in developer hashmap
-			// (4) - 2 make developer metrics using developer hashmap
-			// (4) - 3 put developer metrics to developer cluster model as test case -> can know developer's cluster group
-
-
-			//(5) prediction
-			//(5) find developers commit ! one commit ! - if using commit time, can find commit using test commit set
-			//preprocessing...(remove committime)
-			//(5) apply metrics to each cluster model
-			//save result commitHash-source / commitTime / developer / prediction label / real label (incubator-hivemall_test_developer.csv)
-
-
+			
+			//Accuracy
+			if(accuracy == true) {
+				
+			}
+			
+			if(jit == true) {
+				
+			}
+			//JIT
 
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -520,6 +510,9 @@ public class MainScenario {
 			if(outputPath.endsWith(File.separator)) {
 				outputPath = outputPath.substring(0, outputPath.lastIndexOf(File.separator));
 			}
+			
+			accuracy = cmd.hasOption("a");
+			jit = cmd.hasOption("j");
 			help = cmd.hasOption("h");
 
 		} catch (Exception e) {
@@ -641,6 +634,16 @@ public class MainScenario {
 				.hasArg()
 				.argName("path")
 				.required()
+				.build());
+		
+		options.addOption(Option.builder("a").longOpt("accuracy")
+				.desc("Accuracy of developer based defect prediction")
+				.argName("accuracy")
+				.build());
+		
+		options.addOption(Option.builder("j").longOpt("JustInTime")
+				.desc("Accuracy of just in time defect prediction")
+				.argName("JustInTime")
 				.build());
 
 		options.addOption(Option.builder("h").longOpt("help")

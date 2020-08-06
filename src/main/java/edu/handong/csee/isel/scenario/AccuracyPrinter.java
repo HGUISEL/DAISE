@@ -116,10 +116,10 @@ public class AccuracyPrinter {
 		float cPrecision = (float)cTruePositive / denominator;
 		
 		//cal Recall
-		denominator = (float)(bTruePositive / bFalseNegative);
+		denominator = ((float)bTruePositive + (float)bFalseNegative);
 		float bRecall = (float)bTruePositive / denominator;
 		
-		denominator = (float)(cTruePositive / cFalseNegative);
+		denominator = ((float)cTruePositive + (float)cFalseNegative);
 		float cRecall = (float)cTruePositive / denominator;
 		
 		//cal F1 score
@@ -131,7 +131,6 @@ public class AccuracyPrinter {
 		numerator = cPrecision * cRecall;
 		float cF1score = (numerator/denominator) * 2;
 		
-		
 		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(output + "/developer-result-main.txt")));
 		bufferedWriter.write("All Test Instance / All Tets Defect :\n");
 		bufferedWriter.write(numOfInstance + " / " + numOfdefect + "\n");
@@ -139,11 +138,24 @@ public class AccuracyPrinter {
 		bufferedWriter.write("Recall : "+bRecall+"\n");
 		bufferedWriter.write("Precision : "+ bPrecision + "\n");
 		bufferedWriter.write("F1 score : " + bF1score + "\n");
-		bufferedWriter.write("----------------------------------");
+		bufferedWriter.write("________________________________\n");
+		bufferedWriter.write("bTruePositive : " + bTruePositive + "\n");
+		bufferedWriter.write("bFalsePositive : " + bFalsePositive + "\n");
+		bufferedWriter.write("bFalseNegative : " + bFalseNegative + "\n");
+		bufferedWriter.write("bTrueNegative : " + bTrueNegative + "\n");
+		bufferedWriter.write("________________________________\n");
 		bufferedWriter.write("clean\n");
 		bufferedWriter.write("Recall : "+cRecall+"\n");
 		bufferedWriter.write("Precision : "+ cPrecision + "\n");
 		bufferedWriter.write("F1 score : " + cF1score + "\n");
+		bufferedWriter.write("________________________________\n");
+		bufferedWriter.write("cTruePositive : " + cTruePositive + "\n");
+		bufferedWriter.write("cFalsePositive : " + cFalsePositive + "\n");
+		bufferedWriter.write("cFalseNegative : " + cFalseNegative + "\n");
+		bufferedWriter.write("cTrueNegative : " + cTrueNegative + "\n");
+		bufferedWriter.write("________________________________\n");
+		
+		bufferedWriter.close();
 		
 	}
 
