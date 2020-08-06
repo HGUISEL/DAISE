@@ -143,12 +143,12 @@ public class MainScenario {
 				developer.add(developerNameCSV.get(index));//save developer
 				cluster.add(em.clusterInstance(inst));// save cluster of developer
 				numOfCluster.add(em.clusterInstance(inst)); //number of developer each cluster
-				//		         System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
+				//System.out.println("Instance " + inst + " is assignned to cluster " + (em.clusterInstance(inst)));
 			}
-			
+
 			if(numOfCluster.size() == 1) {
 				File warning = new File(metadataPath +File.separator+projectName+"-OnlyOneCluster");
-		        System.exit(0);
+				System.exit(0);
 			}
 
 			//read training arff file
@@ -249,8 +249,8 @@ public class MainScenario {
 					testMetaDataArr.add(testMetaData);
 					testDeveloperMetrics.put(commitTime, testMetaDataArr);
 				}
-				
-				
+
+
 			}
 
 			//make test developer metrics for developer profiling
@@ -261,35 +261,35 @@ public class MainScenario {
 			String classifyDirPath = classifyDir.getAbsolutePath();
 
 			for(String commitTime : commitTimes) {//read commitTime last -> recent order
-				
+
 				//make developer metrics csv file
 				ArrayList<TestMetaData> contents = testDeveloperMetrics.get(commitTime);
 				TreeSet<String> authorID = new TreeSet<>();
-				
+
 				for(int i = 0; i < contents.size(); i++) {
 					authorID.add(contents.get(i).getAuthorID());
 				}
-				
+
 				for(String aAutorID : authorID) {
 					File newFileD = new File(classifyDirPath + File.separator + commitTime + aAutorID + "-developer-metric.csv");
 					String developerMetricPath = newFileD.getAbsolutePath();
 					ArrayList<TestMetaData> testMetaDataArr;
-					
+
 					if(! (accumulatedTestDeveloperMetrics.containsKey(aAutorID))) {
 						testMetaDataArr = new ArrayList<>();
 						accumulatedTestDeveloperMetrics.put(aAutorID, testMetaDataArr);
 					}
-					
+
 					testMetaDataArr = accumulatedTestDeveloperMetrics.get(aAutorID);
 					for(TestMetaData aData : contents) {
 						if(aData.getAuthorID().equals(aAutorID))
 							testMetaDataArr.add(aData);
 					}
-					
+
 					if(testMetaDataArr == null) {
 						System.out.println(aAutorID + " commitTime : "+commitTime);
 					}
-					
+
 					makedeveloperMetricCSV(testMetaDataArr,developerMetricPath);
 					File testDeveloperProfiling = new File(collectingDeveloperProfilingMetrics(developerMetricPath));
 
@@ -299,7 +299,7 @@ public class MainScenario {
 					eval.evaluateClusterer(test);//test set을 cluster로 분류한 것 !!!!
 					//System.out.println(eval.clusterResultsToString());
 					Instance test1 = test.get(0);
-					//if(test.size() > 1) System.out.println(test.size());
+					
 					commitTime_cluster.put(commitTime, em.clusterInstance(test1));
 					testDeveloperProfiling.delete();
 				}
@@ -316,26 +316,26 @@ public class MainScenario {
 				DataSource source = new DataSource(path);
 				Instances clusterData = source.getDataSet();
 				clusterData.setClassIndex(0);
-				
+
 				//make machine learning model
 				System.out.println("Start classify");
 				Classifier randomForest = new RandomForest();
 				randomForest.buildClassifier(clusterData);
 				System.out.println("End classify");
-				
+
 				//make test arff file
 				ArrayList<String> clusterCommitTime = getKey(commitTime_cluster,i);
-				
+
 				for(String eachCommitTime : clusterCommitTime) {
-					
+
 					ArrayList<TestSetInfo> commitTimeTestSets = testSet.get(eachCommitTime);
 					if(commitTimeTestSets == null) continue;
 					for(TestSetInfo commitTimeTestSet : commitTimeTestSets) { //commitHash,arff
 						String aTestData = commitTimeTestSet.getData();
 						String key = commitTimeTestSet.getCommitHashSource();
-						
+
 						System.out.println(key);
-						
+
 						File newFileT = new File(classifyDirPath + File.separator + eachCommitTime + "-test-metric.arff");
 						String testMetricPath = newFileT.getAbsolutePath();
 						StringBuffer newContentBuf = new StringBuffer();
@@ -345,25 +345,25 @@ public class MainScenario {
 						}
 						//print data
 						newContentBuf.append(aTestData + "\n");
-						
+
 						FileUtils.write(newFileT, newContentBuf.toString(), "UTF-8");
-						
+
 						//weka test eval
 						DataSource testsource = new DataSource(testMetricPath);
 						Instances testdata = testsource.getDataSet();
 						testdata.setClassIndex(0);
-//						System.out.println("attribute "+testdata.get(0).stringValue(testdata.attribute("@@class@@")));
-//						System.out.println("attribute "+testdata.get(0).stringValue(testdata.attribute("meta_data-AuthorID")));
+						//						System.out.println("attribute "+testdata.get(0).stringValue(testdata.attribute("@@class@@")));
+						//						System.out.println("attribute "+testdata.get(0).stringValue(testdata.attribute("meta_data-AuthorID")));
 
 						Evaluation evalClassify = new Evaluation(clusterData);
 						evalClassify.evaluateModel(randomForest, testdata);
-//						System.out.println(evalClassify.toSummaryString("\nResults\n======\n", false));
-//						System.out.println("attStats");
-//						System.out.println(attStats.toString());
-//						System.out.println("toClassDetailsString");
-//						System.out.println(evalClassify.toClassDetailsString());
-//						System.out.println();
-						
+						//						System.out.println(evalClassify.toSummaryString("\nResults\n======\n", false));
+						//						System.out.println("attStats");
+						//						System.out.println(attStats.toString());
+						//						System.out.println("toClassDetailsString");
+						//						System.out.println(evalClassify.toClassDetailsString());
+						//						System.out.println();
+
 						DBPDResult DBPD = new DBPDResult();
 						DBPD.setCommitTime(eachCommitTime);
 						DBPD.setRealLabel(testdata.get(0).stringValue(testdata.attribute("@@class@@")));
@@ -371,41 +371,45 @@ public class MainScenario {
 						DBPD.setCorrect(findRealLabel(evalClassify.toSummaryString()));
 						DBPD.setCluster(i);
 						reuslts.put(key,DBPD);
-						
+
 						newFileT.delete();
 					}
 				}
 			}
-			
+
 			//save result to CSV
 			String resultCSVPath = Save2CSV(reuslts);
-			
-			
-			//Accuracy
-			if(accuracy == true) {
-				AccuracyPrinter accuracy = new AccuracyPrinter();
-				accuracy.setResultCSVPath(resultCSVPath);
-				accuracy.setOutputPath(outputPath);
-				accuracy.setProjectName(projectName);
-				accuracy.calAccuracy();
-			}
-			
-			//JIT
-			if(jit == true) {
-				String train = metadataPath +File.separator+ projectName + "-train-data.arff";
-				String test = metadataPath +File.separator+ projectName + "-test-data.arff";
-				AccuracyPrinter accuracy = new AccuracyPrinter();
-				accuracy.setTrain(train);
-				accuracy.setTest(test);
-				accuracy.setOutputPath(outputPath);
-				accuracy.setProjectName(projectName);
-				accuracy.JITdefectPrediction();
+
+			if(accuracy == true || jit == true) {
+				AccuracyPrinter accuracyPrinter = new AccuracyPrinter();
+
+				//Accuracy
+				if(accuracy == true) {
+					System.out.println("Start Developer Profiling based Defect Prediction");
+					accuracyPrinter.setResultCSVPath(resultCSVPath);
+					accuracyPrinter.setOutputPath(outputPath);
+					accuracyPrinter.setProjectName(projectName);
+					accuracyPrinter.calAccuracy();
+				}
+
+				//JIT
+				if(jit == true) {
+					System.out.println("Start Just In Time Defect Prediction");
+					String train = metadataPath +File.separator+ projectName + "-train-data.arff";
+					String test = metadataPath +File.separator+ projectName + "-test-data.arff";
+					accuracyPrinter.setTrain(train);
+					accuracyPrinter.setTest(test);
+					accuracyPrinter.setOutputPath(outputPath);
+					accuracyPrinter.setProjectName(projectName);
+					accuracyPrinter.JITdefectPrediction();
+				}
 			}
 
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 
 			}
+
 		}
 	}
 
@@ -425,9 +429,9 @@ public class MainScenario {
 		BufferedWriter writer = new BufferedWriter(new FileWriter( new File(resultCSVPath)));
 		CSVPrinter csvPrinter = new CSVPrinter(writer, 
 				CSVFormat.DEFAULT.withHeader("Cluster","Key","Commit Time","Author ID","P Label","R Label"));
-		
+
 		Set<Map.Entry<String, DBPDResult>> entries = reuslts.entrySet();
-		
+
 		for (Map.Entry<String,DBPDResult> entry : entries) {
 			String key = entry.getKey();
 			int cluster = entry.getValue().getCluster();
@@ -436,17 +440,17 @@ public class MainScenario {
 			String realLabel = entry.getValue().getRealLabel();
 			boolean isCorrect = entry.getValue().isCorrect;
 			String predictionLabel = setPredictionLable(realLabel,isCorrect);
-			
+
 			csvPrinter.printRecord(cluster,key,commitTime,authorID,predictionLabel,realLabel);
 		}
-		
+
 		csvPrinter.close();
-		
+
 		return resultCSVPath;
 	}
 
 	private String setPredictionLable(String realLabel, boolean isCorrect) {
-//		System.out.println("realLabel : " +realLabel + "  isCorrect : "+ isCorrect);
+		//		System.out.println("realLabel : " +realLabel + "  isCorrect : "+ isCorrect);
 		if(realLabel.equals("clean") && isCorrect == true) {
 			return "clean";
 		}else if(realLabel.equals("buggy") && isCorrect == true) {
@@ -475,12 +479,12 @@ public class MainScenario {
 	private ArrayList<String> getKey(HashMap<String, Integer> commitTime_cluster, int i) {
 		ArrayList<String> clusterCommitTime = new ArrayList<>();
 		Object value = i;
-		
+
 		for (Object key : commitTime_cluster.keySet()) {
 			if (commitTime_cluster.get(key).equals(value)) {
-            	clusterCommitTime.add(key.toString());
-            }
-        }
+				clusterCommitTime.add(key.toString());
+			}
+		}
 		return clusterCommitTime;
 	}
 
@@ -525,7 +529,7 @@ public class MainScenario {
 			if(outputPath.endsWith(File.separator)) {
 				outputPath = outputPath.substring(0, outputPath.lastIndexOf(File.separator));
 			}
-			
+
 			accuracy = cmd.hasOption("a");
 			jit = cmd.hasOption("j");
 			help = cmd.hasOption("h");
@@ -559,9 +563,9 @@ public class MainScenario {
 		String commitTime;
 		Matcher m;
 		boolean dataPart = false;
-		
+
 		for (String line : lines) {
-			
+
 			if(!dataPart) {
 				if (line.startsWith("@data")) {
 					dataPart = true;
@@ -582,9 +586,9 @@ public class MainScenario {
 			commitTime = m.group(1);
 
 			line = line.substring(0, line.lastIndexOf(',')) + "}";
-			
+
 			TestSetInfo testSetInfo = new TestSetInfo(commitHashSource,line);
-			
+
 			if(testSet.containsKey(commitTime)) {
 				ArrayList<TestSetInfo> testSetInfos = testSet.get(commitTime);
 				testSetInfos.add(testSetInfo);
@@ -650,12 +654,12 @@ public class MainScenario {
 				.argName("path")
 				.required()
 				.build());
-		
+
 		options.addOption(Option.builder("a").longOpt("accuracy")
 				.desc("Accuracy of developer based defect prediction")
 				.argName("accuracy")
 				.build());
-		
+
 		options.addOption(Option.builder("j").longOpt("JustInTime")
 				.desc("Accuracy of just in time defect prediction")
 				.argName("JustInTime")
