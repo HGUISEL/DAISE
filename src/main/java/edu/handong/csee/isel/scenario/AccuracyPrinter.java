@@ -5,8 +5,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -19,15 +17,13 @@ import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
 public class AccuracyPrinter {
-
-	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
-		calAccuracy(args[0],args[3]);
-//		JITdefectPrediction(args[1],args[2],args[3]);
-	}
+	 String resultCSVPath;
+	 String outputPath;
+	 String train;
+	 String test;
+	 String projectName;
 	
-	private static void JITdefectPrediction(String train, String test, String output) throws Exception {
-		// TODO Auto-generated method stub
+	void JITdefectPrediction() throws Exception {
 		///data/DBPD/maven-reference/maven-train-data.arff /data/DBPD/maven-reference/maven-test-data.arff /data/DBPD
 		
 		DataSource trainSource = new DataSource(train);
@@ -49,7 +45,7 @@ public class AccuracyPrinter {
 		Evaluation evalClassify = new Evaluation(trainData);
 		evalClassify.evaluateModel(randomForest, testData);
 		
-		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(output + "/result-main.txt")));
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(outputPath + File.separator + projectName + "-JIT-accuracy.txt")));
 		String strSummary = evalClassify.toSummaryString();
 		String detail = evalClassify.toClassDetailsString();
 		bufferedWriter.write(trainData.attribute(0).toString());
@@ -60,7 +56,7 @@ public class AccuracyPrinter {
 		bufferedWriter.close();
 	}
 
-	static void calAccuracy(String path, String output) throws Exception {
+	void calAccuracy() throws Exception {
 		int numOfdefect = 0;
 		int numOfInstance = 0;
 		
@@ -75,7 +71,7 @@ public class AccuracyPrinter {
 		int cTrueNegative = 0;
 		
 		//read file and save value
-		Reader in = new FileReader(path);
+		Reader in = new FileReader(resultCSVPath);
 		Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
 
 		for (CSVRecord record : records) {
@@ -131,7 +127,7 @@ public class AccuracyPrinter {
 		numerator = cPrecision * cRecall;
 		float cF1score = (numerator/denominator) * 2;
 		
-		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(output + "/developer-result-main.txt")));
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(outputPath + File.separator + projectName + "-developer-accuracy.txt")));
 		bufferedWriter.write("All Test Instance / All Tets Defect :\n");
 		bufferedWriter.write(numOfInstance + " / " + numOfdefect + "\n");
 		bufferedWriter.write("buggy\n");
@@ -159,4 +155,24 @@ public class AccuracyPrinter {
 		
 	}
 
+	public void setResultCSVPath(String resultCSVPath) {
+		this.resultCSVPath = resultCSVPath;
+	}
+
+	public void setOutputPath(String outputPath) {
+		this.outputPath = outputPath;
+	}
+
+	public void setTrain(String train) {
+		this.train = train;
+	}
+
+	public void setTest(String test) {
+		this.test = test;
+	}
+
+	public void setProjectName(String projectName) {
+		this.projectName = projectName;
+	}
+	
 }

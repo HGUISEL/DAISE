@@ -378,17 +378,29 @@ public class MainScenario {
 			}
 			
 			//save result to CSV
-			Save2CSV(reuslts);
+			String resultCSVPath = Save2CSV(reuslts);
+			
 			
 			//Accuracy
 			if(accuracy == true) {
-				
+				AccuracyPrinter accuracy = new AccuracyPrinter();
+				accuracy.setResultCSVPath(resultCSVPath);
+				accuracy.setOutputPath(outputPath);
+				accuracy.setProjectName(projectName);
+				accuracy.calAccuracy();
 			}
 			
-			if(jit == true) {
-				
-			}
 			//JIT
+			if(jit == true) {
+				String train = metadataPath +File.separator+ projectName + "-train-data.arff";
+				String test = metadataPath +File.separator+ projectName + "-test-data.arff";
+				AccuracyPrinter accuracy = new AccuracyPrinter();
+				accuracy.setTrain(train);
+				accuracy.setTest(test);
+				accuracy.setOutputPath(outputPath);
+				accuracy.setProjectName(projectName);
+				accuracy.JITdefectPrediction();
+			}
 
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -408,8 +420,9 @@ public class MainScenario {
 		return clusterInformation;
 	}
 
-	private void Save2CSV(HashMap<String, DBPDResult> reuslts) throws Exception {
-		BufferedWriter writer = new BufferedWriter(new FileWriter( new File(outputPath+ File.separator + projectName + "-result.csv")));
+	private String Save2CSV(HashMap<String, DBPDResult> reuslts) throws Exception {
+		String resultCSVPath = outputPath+ File.separator + projectName + "-result.csv";
+		BufferedWriter writer = new BufferedWriter(new FileWriter( new File(resultCSVPath)));
 		CSVPrinter csvPrinter = new CSVPrinter(writer, 
 				CSVFormat.DEFAULT.withHeader("Cluster","Key","Commit Time","Author ID","P Label","R Label"));
 		
@@ -428,6 +441,8 @@ public class MainScenario {
 		}
 		
 		csvPrinter.close();
+		
+		return resultCSVPath;
 	}
 
 	private String setPredictionLable(String realLabel, boolean isCorrect) {
