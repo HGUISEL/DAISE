@@ -38,7 +38,7 @@ public class Simple {
 		Evaluation evaluation = new Evaluation(Data);
 		evaluation.crossValidateModel(randomForest, Data, 10, new Random(1));
 		
-		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(args[0] +File.separator + projectname + "-10-fold.txt")));
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(args[1] +File.separator + projectname + "-10-fold.txt")));
 		String strSummary = evaluation.toSummaryString();
 		String detail = evaluation.toClassDetailsString();
 		bufferedWriter.write(Data.attribute(0).toString());

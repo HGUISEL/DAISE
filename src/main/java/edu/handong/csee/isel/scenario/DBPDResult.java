@@ -20,7 +20,7 @@ public class DBPDResult {
 		this.cluster = 0;
 	}
 	
-	DBPDResult(CSVRecord record){
+	public DBPDResult(CSVRecord record){
 		this.cluster = Integer.parseInt(record.get("Cluster"));
 		this.key = record.get("Key");
 		this.commitTime = record.get("Commit Time");

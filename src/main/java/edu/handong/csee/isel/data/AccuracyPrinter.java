@@ -1,4 +1,4 @@
-package edu.handong.csee.isel.scenario;
+package edu.handong.csee.isel.data;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -9,6 +9,7 @@ import java.io.Reader;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 
+import edu.handong.csee.isel.scenario.DBPDResult;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.trees.RandomForest;
@@ -17,13 +18,13 @@ import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
 public class AccuracyPrinter {
-	 String resultCSVPath;
+	String resultCSVPath;
 	 String outputPath;
 	 String train;
 	 String test;
 	 String projectName;
 	
-	void JITdefectPrediction() throws Exception {
+	public void JITdefectPrediction() throws Exception {
 		///data/DBPD/maven-reference/maven-train-data.arff /data/DBPD/maven-reference/maven-test-data.arff /data/DBPD
 		
 		DataSource trainSource = new DataSource(train);
@@ -56,7 +57,7 @@ public class AccuracyPrinter {
 		bufferedWriter.close();
 	}
 
-	void calAccuracy() throws Exception {
+	public void calAccuracy() throws Exception {
 		int numOfdefect = 0;
 		int numOfInstance = 0;
 		
@@ -176,5 +177,5 @@ public class AccuracyPrinter {
 	public void setProjectName(String projectName) {
 		this.projectName = projectName;
 	}
-	
+
 }
