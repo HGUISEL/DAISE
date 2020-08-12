@@ -9,6 +9,8 @@ import java.util.regex.Pattern;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.functions.Logistic;
 import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
@@ -31,12 +33,24 @@ public class Simple {
 		Data.setClassIndex(0);
 		
 		AttributeStats attStats = Data.attributeStats(0);
+		Classifier classifyModel = null;
 		
-		Classifier randomForest = new RandomForest();
-		randomForest.buildClassifier(Data);
+		if(args[2].toString().compareTo("r") == 0) {
+			classifyModel = new RandomForest();
+		}else if(args[2].toString().compareTo("n") == 0){
+			classifyModel = new NaiveBayes();
+		}else if(args[2].toString().compareTo("l") == 0){
+			classifyModel = new Logistic();
+		}else {
+			classifyModel = new RandomForest();
+		}
+		
+		classifyModel.buildClassifier(Data);
 		
 		Evaluation evaluation = new Evaluation(Data);
-		evaluation.crossValidateModel(randomForest, Data, 10, new Random(1));
+		evaluation.crossValidateModel(classifyModel, Data, 10, new Random(1));
+		
+		
 		
 		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(args[1] +File.separator + projectname + "-10-fold.txt")));
 		String strSummary = evaluation.toSummaryString();
