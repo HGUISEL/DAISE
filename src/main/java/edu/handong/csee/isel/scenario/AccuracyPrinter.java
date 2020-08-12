@@ -128,11 +128,13 @@ public class AccuracyPrinter {
 		float cF1score = (numerator/denominator) * 2;
 		
 		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(outputPath + File.separator + projectName + "-developer-accuracy.txt")));
-		bufferedWriter.write("All Test Instance / All Tets Defect :\n");
-		bufferedWriter.write(numOfInstance + " / " + numOfdefect + "\n");
+		bufferedWriter.write("All Test Instance\n");
+		bufferedWriter.write(numOfInstance + "\n");
+		bufferedWriter.write("Clean     /     Buggy :\n");
+		bufferedWriter.write((numOfInstance - numOfdefect) + " / " + numOfdefect + "\n");
 		bufferedWriter.write("buggy\n");
-		bufferedWriter.write("Recall : "+bRecall+"\n");
 		bufferedWriter.write("Precision : "+ bPrecision + "\n");
+		bufferedWriter.write("Recall : "+bRecall+"\n");
 		bufferedWriter.write("F1 score : " + bF1score + "\n");
 		bufferedWriter.write("________________________________\n");
 		bufferedWriter.write("bTruePositive : " + bTruePositive + "\n");
@@ -141,8 +143,8 @@ public class AccuracyPrinter {
 		bufferedWriter.write("bTrueNegative : " + bTrueNegative + "\n");
 		bufferedWriter.write("________________________________\n");
 		bufferedWriter.write("clean\n");
-		bufferedWriter.write("Recall : "+cRecall+"\n");
 		bufferedWriter.write("Precision : "+ cPrecision + "\n");
+		bufferedWriter.write("Recall : "+cRecall+"\n");
 		bufferedWriter.write("F1 score : " + cF1score + "\n");
 		bufferedWriter.write("________________________________\n");
 		bufferedWriter.write("cTruePositive : " + cTruePositive + "\n");

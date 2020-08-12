@@ -4,6 +4,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -15,7 +17,15 @@ import weka.core.converters.ConverterUtils.DataSource;
 public class Simple {
 
 	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
+		String projectname = null;
+		
+		String projectNamePatternStr = ".+/(.+)\\.arff";
+		Pattern projectNamePattern = Pattern.compile(projectNamePatternStr);
+		Matcher m = projectNamePattern.matcher(args[0]);
+		while(m.find()) {
+			projectname = m.group(1);
+		}
+		
 		DataSource source = new DataSource(args[0]);
 		Instances Data = source.getDataSet();
 		Data.setClassIndex(0);
@@ -28,7 +38,7 @@ public class Simple {
 		Evaluation evaluation = new Evaluation(Data);
 		evaluation.crossValidateModel(randomForest, Data, 10, new Random(1));
 		
-		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File("/data/BIC/result-main.txt")));
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(args[0] +File.separator + projectname + "-10-fold.txt")));
 		String strSummary = evaluation.toSummaryString();
 		String detail = evaluation.toClassDetailsString();
 		bufferedWriter.write(Data.attribute(0).toString());
