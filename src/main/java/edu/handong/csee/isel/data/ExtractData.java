@@ -19,11 +19,12 @@ public class ExtractData {
 	private final static String attribetePatternStr = "@attribute\\s(.+)\\s.+";
 	private final static Pattern attribetePattern = Pattern.compile(attribetePatternStr);
 	
-	private final static String dataPatternStr = "(.+)\\s(.+)";
+	private final static String dataPatternStr = "(\\d+)\\s(.+)";
 	private final static Pattern dataPattern = Pattern.compile(dataPatternStr);
 
 	public static void main(String[] args) throws Exception {
 		TreeMap<String, String>  kameiAttrIndex = new TreeMap<>();
+		TreeMap<String, String>  PDPAttrIndex = new TreeMap<>();
 		ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
 		ArrayList<String> dataLineList = new ArrayList<String>();
 		
@@ -35,7 +36,7 @@ public class ExtractData {
 		while(ma.find()) {
 			projectName = ma.group(1);
 		}
-				
+			
 		initKameiMetric();
 		
 		String content = FileUtils.readFileToString(originArff, "UTF-8");
@@ -56,6 +57,8 @@ public class ExtractData {
 					while(m.find()) {
 						if(kameiAttr.contains(m.group(1))) {
 							kameiAttrIndex.put(Integer.toString(attrIndex),line);
+						}else {
+							PDPAttrIndex.put(Integer.toString(attrIndex), line);
 						}
 					}
 					
@@ -75,8 +78,48 @@ public class ExtractData {
 //			System.out.println("Arr : " + key + " Index : " + index);
 //		}
 		
-		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
+//		for(Integer key : PDPAttrIndex.keySet()) {
+//			String index = PDPAttrIndex.get(key);
+//			System.out.println("Arr : " + key + " Index : " + index);
+//		}
+		
+//		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
+		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
+		
 
+	}
+	
+	private static void ExtractPDPmetricFrom(ArrayList<String> attributeLineList, ArrayList<String> dataLineList,
+			TreeMap<String, String> PDPAttrIndex) throws IOException {
+		
+		HashMap<String, Integer> PDPNumIndex = new HashMap<>();
+		ArrayList<String> PDPAttributeLineList = new ArrayList<>();
+		
+		TreeMap<Integer, String>  PDPAttrIndexSort = new TreeMap<>();
+		for(String index : PDPAttrIndex.keySet()) {
+			PDPAttrIndexSort.put(Integer.parseInt(index), PDPAttrIndex.get(index));
+		}
+		
+		int num = 0;
+		for(int index : PDPAttrIndexSort.keySet()) {
+			String arr = PDPAttrIndex.get(Integer.toString(index));
+			PDPAttributeLineList.add(arr);
+			PDPNumIndex.put(Integer.toString(index), num);
+			num++;
+		}
+		
+		//make data
+		ArrayList<String> PDPData = new ArrayList<String>();
+		
+		for(String dataLine : dataLineList) {
+			String data = parsingIndex(PDPAttrIndex,PDPNumIndex, dataLine);
+			PDPData.add(data);
+//			System.out.println(data);
+//			break;
+		}
+		
+		Save2Arff(PDPAttributeLineList, PDPData, "p");
+		
 	}
 	
 	private static void ExtractKameiMetricFrom(ArrayList<String> attributeLineList, ArrayList<String> dataLineList,
@@ -107,6 +150,38 @@ public class ExtractData {
 		
 	}
 	
+	private static String parsingIndex(TreeMap<String, String> kameiAttrIndex, HashMap<String, Integer>  kameiNumIndex, String dataLine) {
+		
+		String[] lines = dataLine.split(",");
+		String data = "{";
+//		if(lines[0].startsWith("{0 ")) {
+//			data = lines[0] + ",";
+//		}else {
+//			data = "{";
+//		}
+		
+		for (String line : lines) {
+			Matcher m = dataPattern.matcher(line);
+			while(m.find()) {
+				if(kameiAttrIndex.containsKey(m.group(1))) {
+					int reIndex = kameiNumIndex.get(m.group(1));
+					data = data + reIndex + " " + m.group(2) + ",";
+				}else {
+					continue;
+				}
+			}
+		}
+		
+		if(data.endsWith("},")) {
+			data = data.substring(0,data.length()-1);
+		}else {
+			data = data.substring(0,data.length()-1);
+			data = data + "}";
+		}
+		
+		return data;
+	}
+	
 	private static String parsingIndexNData(TreeMap<String, String> kameiAttrIndex, HashMap<String, Integer>  kameiNumIndex, String dataLine) {
 		
 		String[] lines = dataLine.split(",");
@@ -129,7 +204,12 @@ public class ExtractData {
 			}
 		}
 		
-		data = data.substring(0,data.length()-1);
+		if(data.endsWith("},")) {
+			data = data.substring(0,data.length()-1);
+		}else {
+			data = data.substring(0,data.length()-1);
+			data = data + "}";
+		}
 		
 		return data;
 	}
@@ -159,16 +239,6 @@ public class ExtractData {
 		FileUtils.write(arff, newContentBuf.toString(), "UTF-8");
 		
 
-	}
-
-
-
-	void ExtractPDPmetricFrom() {
-//		TreeMap<string,string> tm = new TreeMap<string,string>(kameiAttrIndex);
-//		Iterator<string> keyiterator = tm.descendingKeySet().iterator();
-		
-//		Set<String> keyset = kameiAttrIndex.keySet(); 
-//		Iterator<String> keyiterator = kameiAttrIndex.keySet( ).iterator( );
 	}
 	
 	static void initKameiMetric() {
