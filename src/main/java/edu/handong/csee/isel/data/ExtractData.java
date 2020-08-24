@@ -83,7 +83,7 @@ public class ExtractData {
 //			System.out.println("Arr : " + key + " Index : " + index);
 //		}
 		
-//		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
+		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
 		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
 		
 
