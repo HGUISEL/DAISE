@@ -31,13 +31,13 @@ public class Simple {
 		
 		DataSource source = new DataSource(args[0]);
 		Instances Data = source.getDataSet();
-		System.out.println(Data.classAttribute());
+		Data.setClassIndex(Data.numAttributes() - 1);
 		
 		AttributeStats attStats = Data.attributeStats(0);
 		
 		DataSource testSource = new DataSource(args[3]);
 		Instances testData = testSource.getDataSet();
-		System.out.println(testData.classAttribute());
+		testData.setClassIndex(testData.numAttributes() - 1);
 		
 		Classifier classifyModel = null;
 		
