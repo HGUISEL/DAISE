@@ -32,12 +32,14 @@ public class Simple {
 		DataSource source = new DataSource(args[0]);
 		Instances Data = source.getDataSet();
 		Data.setClassIndex(Data.numAttributes() - 1);
+		System.out.println(Data.classAttribute());
 		
 		AttributeStats attStats = Data.attributeStats(0);
 		
 		DataSource testSource = new DataSource(args[3]);
 		Instances testData = testSource.getDataSet();
 		testData.setClassIndex(testData.numAttributes() - 1);
+		System.out.println(testData.classAttribute());
 		
 		Classifier classifyModel = null;
 		
