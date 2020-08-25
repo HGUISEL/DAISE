@@ -11,6 +11,7 @@ import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.Logistic;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
@@ -33,6 +34,11 @@ public class Simple {
 		Data.setClassIndex(0);
 		
 		AttributeStats attStats = Data.attributeStats(0);
+		
+		DataSource testSource = new DataSource(args[3]);
+		Instances testData = testSource.getDataSet();
+		testData.setClassIndex(0);
+		
 		Classifier classifyModel = null;
 		
 		if(args[2].toString().compareTo("r") == 0) {
@@ -41,16 +47,15 @@ public class Simple {
 			classifyModel = new NaiveBayes();
 		}else if(args[2].toString().compareTo("l") == 0){
 			classifyModel = new Logistic();
-		}else {
-			args[2] = "r";
-			classifyModel = new RandomForest();
+		}else if(args[2].toString().compareTo("i")==0){
+			classifyModel = new IBk();
 		}
 		
 		classifyModel.buildClassifier(Data);
 		
 		Evaluation evaluation = new Evaluation(Data);
-		evaluation.crossValidateModel(classifyModel, Data, 10, new Random(1));
-		
+//		evaluation.crossValidateModel(classifyModel, Data, 10, new Random(1));
+		evaluation.evaluateModel(classifyModel, testData);
 		
 		
 		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(args[1] +File.separator + projectname + "-" + args[2] + "-10-fold.txt")));
