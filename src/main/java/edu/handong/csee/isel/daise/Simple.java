@@ -34,7 +34,8 @@ public class Simple {
 		Data.setClassIndex(Data.numAttributes() - 1);
 		System.out.println(Data.classAttribute());
 		
-		AttributeStats attStats = Data.attributeStats(0);
+		AttributeStats attStats = Data.attributeStats(Data.numAttributes() - 1);
+		System.out.println(attStats.toString());
 		
 		DataSource testSource = new DataSource(args[3]);
 		Instances testData = testSource.getDataSet();
