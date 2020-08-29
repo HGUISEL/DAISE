@@ -14,6 +14,7 @@ import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.SimpleLogistic;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.RandomForest;
@@ -45,8 +46,13 @@ public class Simple {
 //		testData.setClassIndex(testData.numAttributes() - 1);
 //		System.out.println(testData.classAttribute());
 		
-		ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("random","naive","j48","bayesNet","lmt","simpleLo"));
-		
+		ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("random","naive","j48","bayesNet","lmt","ibk"));
+//		ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive"));
+
+		File resultDir = new File(args[1] +File.separator + projectname);
+		resultDir.mkdir();
+		String output = resultDir.getAbsolutePath();
+				
 		for(String algorithm : algorithms) {
 		Classifier classifyModel = null;
 		
@@ -60,26 +66,31 @@ public class Simple {
 			classifyModel = new BayesNet();
 		}else if(algorithm.compareTo("lmt") == 0){
 			classifyModel = new LMT();
-		}else if(algorithm.compareTo("simpleLo") == 0){
-			classifyModel = new SimpleLogistic();
+		}else if (algorithm.compareTo("ibk") == 0) {
+			classifyModel = new IBk();
 		}
 		
 		classifyModel.buildClassifier(Data);
 		
 		Evaluation evaluation = new Evaluation(Data);
-		evaluation.crossValidateModel(classifyModel, Data, 10, new Random(1));
 		
-//		evaluation.evaluateModel(classifyModel, testData);
-		
-		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(args[1] +File.separator + projectname + "-" + algorithm + "-10-fold.txt")));
-		String strSummary = evaluation.toSummaryString();
-		String detail = evaluation.toClassDetailsString();
-		bufferedWriter.write(Data.attribute(0).toString());
-		bufferedWriter.write("\n");
-		bufferedWriter.write(attStats.toString());
-		bufferedWriter.write(strSummary);
-		bufferedWriter.write(detail);
-		bufferedWriter.close();
+		for(int i = 1; i < 11; i++) {
+			evaluation.crossValidateModel(classifyModel, Data, 10, new Random(i));
+			
+	//		evaluation.evaluateModel(classifyModel, testData);
+			
+			BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(output +File.separator + projectname + "-" + algorithm + "-" +i+"-10-fold.txt")));
+			
+			String strSummary = evaluation.toSummaryString();
+			String detail = evaluation.toClassDetailsString();
+			
+			bufferedWriter.write(Data.attribute(0).toString());
+			bufferedWriter.write("\n");
+			bufferedWriter.write(attStats.toString());
+			bufferedWriter.write(strSummary);
+			bufferedWriter.write(detail);
+			bufferedWriter.close();
+			}
 		}
 		
 		System.out.println("Finish "+projectname);
