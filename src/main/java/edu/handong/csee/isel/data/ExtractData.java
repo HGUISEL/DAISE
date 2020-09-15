@@ -21,6 +21,11 @@ public class ExtractData {
 	
 	private final static String dataPatternStr = "(\\d+)\\s(.+)";
 	private final static Pattern dataPattern = Pattern.compile(dataPatternStr);
+	
+	/*
+	 * args[0] : input projectName-data.arff path
+	 * args[1] : output path
+	 */
 
 	public static void main(String[] args) throws Exception {
 		TreeMap<String, String>  kameiAttrIndex = new TreeMap<>();
@@ -84,7 +89,7 @@ public class ExtractData {
 //		}
 		
 		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
-		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
+//		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
 		
 
 	}
@@ -154,11 +159,6 @@ public class ExtractData {
 		
 		String[] lines = dataLine.split(",");
 		String data = "{";
-//		if(lines[0].startsWith("{0 ")) {
-//			data = lines[0] + ",";
-//		}else {
-//			data = "{";
-//		}
 		
 		for (String line : lines) {
 			Matcher m = dataPattern.matcher(line);

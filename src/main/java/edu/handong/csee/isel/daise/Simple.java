@@ -23,6 +23,10 @@ import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
 public class Simple {
+	/*
+	 * args[0] : arff file path
+	 * args[1] : result path
+	 */
 
 	public static void main(String[] args) throws Exception {
 		String projectname = null;
