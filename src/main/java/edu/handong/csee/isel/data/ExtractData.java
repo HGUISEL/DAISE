@@ -254,8 +254,8 @@ public class ExtractData {
 				"meta_data-AGE",//AGE
 				"meta_data-NUC",//NUC
 				"meta_data-developerExperience",//EXP
-				"meta_data-REXP"//REXP
-				//no SEXP
+				"meta_data-REXP",//REXP
+				"meta_data-SEXP"//SEXP
 				));
 	}
 }
