@@ -19,7 +19,7 @@ repositories {
     jcenter()
 }
 apply plugin: 'application'
-mainClassName = "edu.handong.csee.isel.daise.Simple"
+mainClassName = "edu.handong.csee.isel.data.NumberOfCommit"
 
 //apply plugin: 'application'
 //mainClassName = "edu.handong.csee.isel.MainDAISE"

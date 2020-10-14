@@ -25,6 +25,7 @@ public class ExtractData {
 	/*
 	 * args[0] : input projectName-data.arff path
 	 * args[1] : output path
+	 * args[2] : kamei or pdp?
 	 */
 
 	public static void main(String[] args) throws Exception {
@@ -88,8 +89,10 @@ public class ExtractData {
 //			System.out.println("Arr : " + key + " Index : " + index);
 //		}
 		
+		if(args[2].compareTo("k") == 0)
 		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
-//		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
+		else if (args[2].compareTo("p") == 0)
+		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
 		
 
 	}
