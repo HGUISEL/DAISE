@@ -15,11 +15,15 @@ import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.SimpleLogistic;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.meta.MultiSearch;
+import weka.classifiers.meta.multisearch.DefaultEvaluationMetrics;
+import weka.classifiers.meta.multisearch.DefaultSearch;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
+import weka.core.SelectedTag;
 import weka.core.converters.ConverterUtils.DataSource;
 
 public class Simple {
@@ -50,7 +54,7 @@ public class Simple {
 //		testData.setClassIndex(testData.numAttributes() - 1);
 //		System.out.println(testData.classAttribute());
 		
-		ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("random","naive","j48","bayesNet","lmt","ibk"));
+		ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("random","ibk"));
 //		ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive"));
 
 		File resultDir = new File(args[1] +File.separator + projectname);
@@ -74,7 +78,13 @@ public class Simple {
 			classifyModel = new IBk();
 		}
 		
-		classifyModel.buildClassifier(Data);
+		MultiSearch multi = new MultiSearch();
+	    multi.setClassifier(classifyModel);
+	    
+	    SelectedTag tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_AUC, new DefaultEvaluationMetrics().getTags());
+	    multi.setEvaluation(tag);
+	    multi.setAlgorithm(new DefaultSearch());
+	    multi.buildClassifier(Data);
 		
 		Evaluation evaluation = new Evaluation(Data);
 		

@@ -43,6 +43,8 @@ public class PDPmain {
 	boolean help;
 	String projectName;
 	String referenceFolderPath;
+	int numOfTopDeveloper;
+	int numOfDeveloper;
 	ArrayList<String> keyOfFinalArffFile = new ArrayList<String>();
 	
 	private final static String firstDeveloperIDPatternStr = ".+\\{'\\s([^,]+)',.+\\}"; 
@@ -68,6 +70,7 @@ public class PDPmain {
 				printHelp(options);
 				return;
 			}
+			numOfTopDeveloper = 10;
 			
 			//parsing projectName and referenceFoldername
 			Pattern pattern = Pattern.compile("(.+)/(.+)-data.arff");
@@ -166,6 +169,9 @@ public class PDPmain {
 				}
 			}
 			
+			//save total number of developer
+			numOfDeveloper = developerInformation.size();
+			
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer = new TreeMap<>(Collections.reverseOrder());
 			Set<Map.Entry<String, DeveloperCommit>> entries = developerInformation.entrySet();
 			
@@ -186,7 +192,9 @@ public class PDPmain {
 			
 			ArrayList<String> topTenDeveloper = selectTopTenDeveloper(numOfCommit_developer);
 			
-			HashMap<String,ArrayList<String>> topTendeveloper_100commitHashData = selectData(developerInformation,topTenDeveloper);
+			HashMap<String,ArrayList<String>> topTendeveloper_100commitHashData = selectData(developerInformation,topTenDeveloper); 
+			
+			
 			
 			//Save top ten developer arff file
 			File developerArff = new File(directoryPath+File.separator+"developerArff");
@@ -214,39 +222,33 @@ public class PDPmain {
 			
 			System.out.println("Success saveing arff file of Top 10 developer features");
 			
-			//clustering topTen developer :
-				//read meta data csv file and save only 100commits
-			String profilingMetadatacsvPath = makeCsvFile_HundredCommitFromTopTenDeveloper(keyOfFinalArffFile);
-			File developerProfiling = new File(collectingDeveloperProfilingMetrics(profilingMetadatacsvPath));
+//			while(true) {
+//				ArrayList<String> topDeveloper = selectTopTenDeveloper(numOfCommit_developer);
+//				
+//				HashMap<String,ArrayList<String>> topdeveloper_100commitHashData = selectData(developerInformation,topTenDeveloper); 
+//				//verify the number of developer cluster, if there are less than one, plus 5 developers 10->15->20->...-> NumOfDeveloper
+//				Instances clustereddata = verifyTheNumOfDeveloperCluster(keyOfFinalArffFile);
+//				
+//				
+//				
+//				
+//				//만약 cluster 수가 1이하면, +5를 해서 반복한다. 
+//				if(numOfCluster < 2) {
+//					numOfTopDeveloper += 5;
+//					if(numOfTopDeveloper > numOfDeveloper || numOfTopDeveloper == numOfDeveloper) {
+//						numOfTopDeveloper = numOfDeveloper;
+//						numOfDeveloper = 0;
+//					}
+//					if(numOfDeveloper == 0) {
+//						System.out.println("There is no more one cluster...");
+//						System.exit(0);
+//					}
+//					break;
+//				}else {
+//					break;
+//				}
+//			}
 			
-				//clustering developer using weka EM algorithm
-			CSVLoader loader = new CSVLoader();
-			loader.setSource(developerProfiling);
-
-			Instances data = loader.getDataSet();
-			
-				
-			int[] toSelect = new int[data.numAttributes()-1];
-			
-			for (int i = 0, j = 1; i < data.numAttributes()-1; i++,j++) {
-				toSelect[i] = j;
-			}
-				//delete developer ID column of CSV file
-			Remove removeFilter = new Remove();
-			removeFilter.setAttributeIndicesArray(toSelect);
-			removeFilter.setInvertSelection(true);
-			removeFilter.setInputFormat(data);
-			Instances newData = Filter.useFilter(data, removeFilter);
-
-				//apply EM clustering algorithm
-			Clusterer em = new EM();
-			em.buildClusterer(newData);
-
-			ClusterEvaluation eval = new ClusterEvaluation();
-			eval.setClusterer(em);
-			eval.evaluateClusterer(newData);
-			System.out.println(eval.clusterResultsToString()); //weka처럼 clustering 결과 볼 수 있
-			System.out.println();
 			
 			
 			//
@@ -256,6 +258,44 @@ public class PDPmain {
 		}
 	}
 	
+	private Instances verifyTheNumOfDeveloperCluster(ArrayList<String> keyOfFinalArffFile) throws Exception {
+		//clustering topTen developer :
+		//read meta data csv file and save only 100commits
+		String profilingMetadatacsvPath = makeCsvFile_HundredCommitFromTopTenDeveloper(keyOfFinalArffFile);
+		File developerProfiling = new File(collectingDeveloperProfilingMetrics(profilingMetadatacsvPath));
+		
+			//clustering developer using weka EM algorithm
+		CSVLoader loader = new CSVLoader();
+		loader.setSource(developerProfiling);
+
+		Instances data = loader.getDataSet();
+		
+			
+		int[] toSelect = new int[data.numAttributes()-1];
+		
+		for (int i = 0, j = 1; i < data.numAttributes()-1; i++,j++) {
+			toSelect[i] = j;
+		}
+			//delete developer ID column of CSV file
+		Remove removeFilter = new Remove();
+		removeFilter.setAttributeIndicesArray(toSelect);
+		removeFilter.setInvertSelection(true);
+		removeFilter.setInputFormat(data);
+		Instances newData = Filter.useFilter(data, removeFilter);
+
+			//apply EM clustering algorithm
+		Clusterer em = new EM();
+		em.buildClusterer(newData);
+
+		ClusterEvaluation eval = new ClusterEvaluation();
+		eval.setClusterer(em);
+		eval.evaluateClusterer(newData);
+		System.out.println(eval.clusterResultsToString()); //weka처럼 clustering 결과 볼 수 있
+		System.out.println();
+		
+		return newData;
+	}
+
 	private String collectingDeveloperProfilingMetrics(String path) throws Exception {
 		String[] DAISEargs = new String[4];
 
@@ -355,9 +395,9 @@ public class PDPmain {
 			ArrayList<String> developer = entry.getValue();
 			topTen.addAll(developer);
 			num += developer.size();
-			if(num > 9) {
-				if(num != 10) {
-					for(; num != 10; num--) {
+			if(num > numOfTopDeveloper-1) {
+				if(num != numOfTopDeveloper) {
+					for(; num != numOfTopDeveloper; num--) {
 						topTen.remove(topTen.size()-1);
 					}
 				}
