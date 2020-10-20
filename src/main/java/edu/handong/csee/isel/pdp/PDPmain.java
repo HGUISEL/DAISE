@@ -239,7 +239,7 @@ public class PDPmain {
 				
 				//만약 cluster 수가 1이하면, +5를 해서 반복한다. 
 				if(cluster_developer == null) {
-					numOfTopDeveloper += 5; //1?
+					numOfTopDeveloper += 1; //1?2?5?
 					if(numOfTopDeveloper >= numOfDeveloper) {
 						numOfTopDeveloper = numOfDeveloper;
 						numOfDeveloper = 0;
