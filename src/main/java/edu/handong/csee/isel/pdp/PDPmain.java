@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +31,7 @@ import edu.handong.csee.isel.data.ExtractData;
 import weka.clusterers.ClusterEvaluation;
 import weka.clusterers.Clusterer;
 import weka.clusterers.EM;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
 import weka.filters.Filter;
@@ -192,7 +194,7 @@ public class PDPmain {
 			
 			ArrayList<String> topTenDeveloper = selectTopTenDeveloper(numOfCommit_developer);
 			
-			HashMap<String,ArrayList<String>> topTendeveloper_100commitHashData = selectData(developerInformation,topTenDeveloper); 
+			HashMap<String,ArrayList<String>> topTendeveloper_100commitHashInstances = selectData(developerInformation,topTenDeveloper); 
 			
 			
 			
@@ -201,7 +203,7 @@ public class PDPmain {
 			String arffDirectoryPath = developerArff.getAbsolutePath();
 			developerArff.mkdir();
 			
-			for(String developerID : topTendeveloper_100commitHashData.keySet()) {
+			for(String developerID : topTendeveloper_100commitHashInstances.keySet()) {
 				File newDeveloperArff = new File(arffDirectoryPath +File.separator+ developerID+".arff");
 				StringBuffer newContentBuf = new StringBuffer();
 				
@@ -212,43 +214,74 @@ public class PDPmain {
 					newContentBuf.append(line + "\n");
 				}
 				
-				for(String data : topTendeveloper_100commitHashData.get(developerID)) {
+				for(String data : topTendeveloper_100commitHashInstances.get(developerID)) {
 					newContentBuf.append(data + "\n");
 				}
 				
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 			}
 			
-			
 			System.out.println("Success saveing arff file of Top 10 developer features");
 			
-//			while(true) {
-//				ArrayList<String> topDeveloper = selectTopTenDeveloper(numOfCommit_developer);
-//				
-//				HashMap<String,ArrayList<String>> topdeveloper_100commitHashData = selectData(developerInformation,topTenDeveloper); 
-//				//verify the number of developer cluster, if there are less than one, plus 5 developers 10->15->20->...-> NumOfDeveloper
-//				Instances clustereddata = verifyTheNumOfDeveloperCluster(keyOfFinalArffFile);
-//				
-//				
-//				
-//				
-//				//만약 cluster 수가 1이하면, +5를 해서 반복한다. 
-//				if(numOfCluster < 2) {
-//					numOfTopDeveloper += 5;
-//					if(numOfTopDeveloper > numOfDeveloper || numOfTopDeveloper == numOfDeveloper) {
-//						numOfTopDeveloper = numOfDeveloper;
-//						numOfDeveloper = 0;
-//					}
-//					if(numOfDeveloper == 0) {
-//						System.out.println("There is no more one cluster...");
-//						System.exit(0);
-//					}
-//					break;
-//				}else {
-//					break;
-//				}
-//			}
+			//PBDP
+			System.out.println("All Developer : " + numOfDeveloper);
+			HashMap<Integer,ArrayList<String>> cluster_developer;
 			
+			while(true) {
+				System.out.println("The number of Top Developer : " + numOfTopDeveloper);
+				keyOfFinalArffFile.clear();
+				
+				ArrayList<String> temp1 = selectTopTenDeveloper(numOfCommit_developer);
+				
+				HashMap<String,ArrayList<String>> temp2 = selectData(developerInformation,temp1); 
+				//verify the number of developer cluster, if there are less than one, plus 5 developers 10->15->20->...-> NumOfDeveloper
+				cluster_developer = clusteringDeveloper(keyOfFinalArffFile);
+				
+				//만약 cluster 수가 1이하면, +5를 해서 반복한다. 
+				if(cluster_developer == null) {
+					numOfTopDeveloper += 5; //1?
+					if(numOfTopDeveloper >= numOfDeveloper) {
+						numOfTopDeveloper = numOfDeveloper;
+						numOfDeveloper = 0;
+						continue;
+					}
+					if(numOfDeveloper == 0) {
+						System.out.println("There is no more one cluster...");
+						System.exit(0);
+					}
+				}else {
+					break;
+				}
+			}
+			
+			//save the result
+			File PDPdeveloperArff = new File(directoryPath+File.separator+"PDPdeveloperArff");
+			String PDParffDirectoryPath = PDPdeveloperArff.getAbsolutePath();
+			PDPdeveloperArff.mkdir();
+			
+			
+			for(int cluster : cluster_developer.keySet()) {
+				ArrayList<String> devloperList = cluster_developer.get(cluster);
+				HashMap<String,ArrayList<String>> developerList_100commitHashInstances = selectData(developerInformation,devloperList); 
+				//developer who include in this cluser
+				File newDeveloperArff = new File(PDParffDirectoryPath +File.separator+"PDP_" + cluster + ".arff");
+				StringBuffer newContentBuf = new StringBuffer();
+				
+				//write attribute
+				for (String line : attributeLineList) {
+					if(line.startsWith("@attribute meta_data-commitTime")) continue;
+					if(line.startsWith("@attribute Key {")) continue;
+					newContentBuf.append(line + "\n");
+				}
+				
+				for(String developerID : developerList_100commitHashInstances.keySet()) {
+					for(String data : developerList_100commitHashInstances.get(developerID)) {
+						newContentBuf.append(data + "\n");
+					}
+				}
+				
+				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+			}
 			
 			
 			//
@@ -258,8 +291,17 @@ public class PDPmain {
 		}
 	}
 	
-	private Instances verifyTheNumOfDeveloperCluster(ArrayList<String> keyOfFinalArffFile) throws Exception {
-		//clustering topTen developer :
+	private int countNumberOfCluster(String clustereddata) {
+		String[] lines = clustereddata.split("\n");
+		String numOfClusterStr = lines[4];
+		int numOfCluster = Integer.parseInt(numOfClusterStr.substring(numOfClusterStr.lastIndexOf(":") + 2, numOfClusterStr.length()));
+		
+		return numOfCluster;
+	}
+
+	private HashMap<Integer,ArrayList<String>> clusteringDeveloper(ArrayList<String> keyOfFinalArffFile) throws Exception {
+		
+		//clustering top developer :
 		//read meta data csv file and save only 100commits
 		String profilingMetadatacsvPath = makeCsvFile_HundredCommitFromTopTenDeveloper(keyOfFinalArffFile);
 		File developerProfiling = new File(collectingDeveloperProfilingMetrics(profilingMetadatacsvPath));
@@ -290,10 +332,51 @@ public class PDPmain {
 		ClusterEvaluation eval = new ClusterEvaluation();
 		eval.setClusterer(em);
 		eval.evaluateClusterer(newData);
-		System.out.println(eval.clusterResultsToString()); //weka처럼 clustering 결과 볼 수 있
-		System.out.println();
+//		System.out.println(eval.clusterResultsToString()); //weka처럼 clustering 결과 볼 수 있
+//		System.out.println();
 		
-		return newData;
+		int numOfCluster = countNumberOfCluster(eval.clusterResultsToString());
+		
+		if(numOfCluster <= 1) {
+			return null;
+		}
+		
+		///save developer cluster!
+		String developerIDPatternStr = "' (.+)',(.+)";
+		Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
+		
+		ArrayList<String> developerNameCSV = new ArrayList<String>(); //developer ID
+		ArrayList<String> developerInstanceCSV = new ArrayList<String>(); //All of developer instance 
+
+		for(int i = 0; i < data.numInstances(); i++) {
+			Matcher m = developerIDPattern.matcher(data.instance(i).toString());
+			while(m.find()) {
+				developerNameCSV.add(m.group(1));
+				developerInstanceCSV.add(m.group(2));
+			}
+		}
+		
+		HashMap<Integer,ArrayList<String>> cluster_developer = new HashMap<>();
+
+		for (Instance inst : newData) {
+			int developerNameIndex = developerInstanceCSV.indexOf(inst.toString());
+			String developerID = developerNameCSV.get(developerNameIndex);
+			int cluster = em.clusterInstance(inst);
+			ArrayList<String> developerList;
+			System.out.println(developerID);
+			System.out.println(cluster);
+			
+			if(cluster_developer.containsKey(cluster)) {
+				developerList = cluster_developer.get(cluster);
+				developerList.add(developerID);
+			}else {
+				developerList = new ArrayList<>();
+				developerList.add(developerID);
+				cluster_developer.put(cluster, developerList);
+			}
+		}
+		
+		return cluster_developer;
 	}
 
 	private String collectingDeveloperProfilingMetrics(String path) throws Exception {

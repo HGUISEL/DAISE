@@ -19,7 +19,7 @@ repositories {
     jcenter()
 }
 apply plugin: 'application'
-mainClassName = "edu.handong.csee.isel.data.NumberOfCommit"
+mainClassName = "edu.handong.csee.isel.pdp.PDPmain"
 
 //apply plugin: 'application'
 //mainClassName = "edu.handong.csee.isel.MainDAISE"
@@ -51,7 +51,9 @@ dependencies {
 	
     // https://mvnrepository.com/artifact/org.apache.commons/commons-csv
     compile group: 'org.apache.commons', name: 'commons-csv', version: '1.7'
-
-	compile group: 'com.github.fracpete', name: 'multisearch-weka-package', version: '2017.10.1'
+	
+	// https://mvnrepository.com/artifact/com.github.fracpete/multisearch-weka-package
+	compile group: 'com.github.fracpete', name: 'multisearch-weka-package', version: '2020.2.17'
+	
 
 }
