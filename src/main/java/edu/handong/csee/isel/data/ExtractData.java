@@ -15,6 +15,8 @@ public class ExtractData {
 	static String projectName;
 	static String output;
 	static ArrayList<String> kameiAttr;
+	static ArrayList<String> OnlineAttr;
+	static ArrayList<String> PDPAttr;
 	
 	private final static String attribetePatternStr = "@attribute\\s(.+)\\s.+";
 	private final static Pattern attribetePattern = Pattern.compile(attribetePatternStr);
@@ -63,7 +65,8 @@ public class ExtractData {
 					while(m.find()) {
 						if(kameiAttr.contains(m.group(1))) {
 							kameiAttrIndex.put(Integer.toString(attrIndex),line);
-						}else {
+						}
+						if(PDPAttr.contains(m.group(1))){
 							PDPAttrIndex.put(Integer.toString(attrIndex), line);
 						}
 					}
@@ -259,6 +262,34 @@ public class ExtractData {
 				"meta_data-developerExperience",//EXP
 				"meta_data-REXP",//REXP
 				"meta_data-SEXP"//SEXP
+				));
+	}
+	
+	static void initOnlineMetric() {
+		OnlineAttr = new ArrayList<String>(Arrays.asList(
+				"'meta_data-Modify Lines'",
+				"'meta_data-Add Lines'",
+				"'meta_data-Delete Lines'",
+				"meta_data-Modify_Chunk",
+				"meta_data-Add_Chunk",
+				"meta_data-Delete_Chunk",
+				"meta_data-numOfBIC",
+				"meta_data-AuthorID",
+				"meta_data-fileAge",
+				"meta_data-SumOfSourceRevision",
+				"meta_data-CommitHour",
+				"meta_data-CommitDate"
+				));
+	}
+	
+	static void initPDPMetric() {
+		PDPAttr = new ArrayList<String>(Arrays.asList(
+				"meta_data-numOfBIC",
+				"meta_data-AuthorID",
+				"meta_data-fileAge",
+				"meta_data-SumOfSourceRevision",
+				"meta_data-CommitHour",
+				"meta_data-CommitDate"
 				));
 	}
 }
