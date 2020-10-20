@@ -13,6 +13,7 @@ import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.functions.Logistic;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.meta.MultiSearch;
 import weka.classifiers.meta.multisearch.DefaultEvaluationMetrics;
@@ -61,7 +62,7 @@ public class Simple{
 //			testData.setClassIndex(testData.numAttributes() - 1);
 //			System.out.println(testData.classAttribute());
 			
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive","j48","lmt"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive","logi"));
 			
 
 			File resultDir = new File(args[1] +File.separator + projectname);
@@ -83,6 +84,8 @@ public class Simple{
 				classifyModel = new LMT();
 			}else if (algorithm.compareTo("ibk") == 0) {
 				classifyModel = new IBk();
+			}else if (algorithm.compareTo("logi") == 0) {
+				classifyModel = new Logistic();
 			}
 			
 			classifyModel.buildClassifier(Data);
