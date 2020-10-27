@@ -18,7 +18,7 @@ public class ExtractData {
 	static ArrayList<String> OnlineAttr;
 	static ArrayList<String> PDPAttr;
 	
-	private final static String attribetePatternStr = "@attribute\\s(.+)\\s.+";
+	private final static String attribetePatternStr = "@attribute\\s(.+)\\s[\\{|[a-zA-Z]+]";
 	private final static Pattern attribetePattern = Pattern.compile(attribetePatternStr);
 	
 	private final static String dataPatternStr = "(\\d+)\\s(.+)";
@@ -44,7 +44,7 @@ public class ExtractData {
 		while(ma.find()) {
 			projectName = ma.group(1);
 		}
-			
+		System.out.println(args[2]);
 		initKameiMetric();
 		
 		String content = FileUtils.readFileToString(originArff, "UTF-8");
@@ -80,7 +80,6 @@ public class ExtractData {
 				}
 			}
 		}
-		
 //		check kamei attr
 //		for(String key : kameiAttrIndex.keySet()) {
 //			String index = kameiAttrIndex.get(key);
@@ -93,9 +92,9 @@ public class ExtractData {
 //		}
 		
 		if(args[2].compareTo("k") == 0)
-		ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
+			ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
 		else if (args[2].compareTo("p") == 0)
-		ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
+			ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
 		
 
 	}
