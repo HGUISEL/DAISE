@@ -27,7 +27,7 @@ public class ExtractData {
 	/*
 	 * args[0] : input projectName-data.arff path
 	 * args[1] : output path
-	 * args[2] : kamei or pdp?
+	 * args[2] : kamei or pdp or online?
 	 */
 
 	public static void main(String[] args) throws Exception {
@@ -60,16 +60,19 @@ public class ExtractData {
 			}else if(!dataPart){
 				
 				if(line.startsWith("@attribute")) {
-					
 					Matcher m = attribetePattern.matcher(line);
 					while(m.find()) {
+						System.out.println(m.group(1));
 						if(kameiAttr.contains(m.group(1))) {
 							kameiAttrIndex.put(Integer.toString(attrIndex),line);
 						}
-						if(PDPAttr.contains(m.group(1))){
-							PDPAttrIndex.put(Integer.toString(attrIndex), line);
-						}
+						
 					}
+					
+					if(line.startsWith("@attribute Key ")) {
+						kameiAttrIndex.put(Integer.toString(attrIndex),line);
+					}
+					
 					
 					attributeLineList.add(line);
 					attrIndex++;
@@ -260,7 +263,9 @@ public class ExtractData {
 				"meta_data-NUC",//NUC
 				"meta_data-developerExperience",//EXP
 				"meta_data-REXP",//REXP
-				"meta_data-SEXP"//SEXP
+				"meta_data-SEXP",//SEXP
+				"meta_data-commitTime",
+				"Key"
 				));
 	}
 	

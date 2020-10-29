@@ -15,19 +15,12 @@ import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.Logistic;
 import weka.classifiers.lazy.IBk;
-import weka.classifiers.meta.MultiSearch;
-import weka.classifiers.meta.multisearch.DefaultEvaluationMetrics;
-import weka.classifiers.meta.multisearch.DefaultSearch;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
-import weka.core.SelectedTag;
 import weka.core.converters.ConverterUtils.DataSource;
-import weka.core.setupgenerator.AbstractParameter;
-import weka.core.setupgenerator.MathParameter;
-import weka.core.Utils;
 
 public class Simple{
 	/*
