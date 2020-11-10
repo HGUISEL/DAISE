@@ -41,8 +41,6 @@ public class OnlineMain {
 	private final static String defaultLabelPatternStr = "@attribute @@class@@ \\{\\w+,(\\w+)\\}";
 	private final static Pattern defaultLabelPattern = Pattern.compile(defaultLabelPatternStr);
 	
-	private static HashMap<Integer,ArrayList<String>> run_trainingSetCommithash = new HashMap<>();
-	private static HashMap<Integer,ArrayList<String>> run_testSetCommithash = new HashMap<>();
 
 	public static void main(String[] args) throws Exception {
 		OnlineMain main = new OnlineMain();
@@ -548,25 +546,6 @@ public class OnlineMain {
 		}
 	}
 
-	private int calTrainingSetSize(String start, TreeMap<String, ArrayList<String>> commitTime_commitHash_experimental, HashMap<String, ArrayList<Boolean>> commitHash_isBuggy) {
-		int tariningSetSize = (int) (baseSet.TotalExperimentalCommit() * 0.6);
-		
-		System.out.println(tariningSetSize);
-		String startDate = start;
-		String endDate = null;
-		
-		int numOfCommit = 0;
-		
-		for(String commitTime : commitTime_commitHash_experimental.keySet()) {
-			if(!(startDate.compareTo(commitTime)<=0)) // only consider BISha1 whose date is bewteen startDate and endDate
-				continue;
-			
-			
-		}
-		
-		return 0;
-	}
-
 	private boolean parsingBugCleanLabel(String line, String firstLabel ,String defaultLabel) {
 		if(line.startsWith(firstLabel)) {
 			if(defaultLabel.compareTo("clean") == 0) 
@@ -581,53 +560,6 @@ public class OnlineMain {
 				return false;
 			}
 		}
-	}
-
-	private String setStartTestSetDate(String t3, int run, int numOfTestSet, TreeMap<String, ArrayList<String>> commitTime_commitHash_experimental) {
-		ArrayList<String> testSetCommithash = new ArrayList<String>();
-		String T4 = null;
-		String startDate = t3;
-		
-		for(String commitTime : commitTime_commitHash_experimental.keySet()) {
-			if(!(startDate.compareTo(commitTime) < 0)) 
-				continue;
-			ArrayList<String> commitHash = commitTime_commitHash_experimental.get(commitTime);
-			testSetCommithash.addAll(commitHash);
-			if(testSetCommithash.size() > numOfTestSet) {
-				T4 = commitTime;
-				break;
-			}
-		}
-		
-		run_testSetCommithash.put(run, testSetCommithash);
-		return T4;
-	}
-
-	private String setStartGapDate(String t1, String t2, int Gap, int numOfTrainingSet, TreeMap<String, ArrayList<String>> commitTime_commitHash_experimental) throws Exception {
-		ArrayList<String> trainingSetCommithash = new ArrayList<String>();
-		String T2 = null;
-		
-//		if(t2 == null) {
-//			T2 = t2;
-//		}else{
-//			T2 = addDate(t2,Gap);
-//		}
-//		
-//		T2 = findNearDate(T2,commitTime_commitHash_experimental,"r");
-		
-		for(String commitTime : commitTime_commitHash_experimental.keySet()) {
-			if(!(t1.compareTo(commitTime)<=0)) 
-				continue;
-			
-			ArrayList<String> commitHash = commitTime_commitHash_experimental.get(commitTime);
-			trainingSetCommithash.addAll(commitHash);
-			if(trainingSetCommithash.size() > numOfTrainingSet) {
-				T2 = commitTime;
-				break;
-			}
-		}
-		
-		return T2;
 	}
 
 	private String findNearDate(String time, TreeMap<String, ArrayList<String>> commitTime_commitHash_experimental,
@@ -847,57 +779,6 @@ public class OnlineMain {
 
 }
 
-class RunDate {
-	String T1;
-	String T2;
-	String T3;
-	String T4;
-	int numOfTrainingSet;
-	int numOfTestSet;
-	
-	RunDate(){
-		T1 = null;
-		T2 = null;
-		T3 = null;
-		T4 = null;
-		numOfTrainingSet = 0;
-		numOfTestSet = 0;
-	}
-
-	public String getT1() {
-		return T1;
-	}
-
-	public void setT1(String t1) {
-		T1 = t1;
-	}
-
-	public String getT2() {
-		return T2;
-	}
-
-	public void setT2(String t2) {
-		T2 = t2;
-	}
-
-	public String getT3() {
-		return T3;
-	}
-
-	public void setT3(String t3) {
-		T3 = t3;
-	}
-
-	public String getT4() {
-		return T4;
-	}
-
-	public void setT4(String t4) {
-		T4 = t4;
-	}
-	
-}
-
 
 class BaseSetting {
 	String outputPath;
@@ -906,25 +787,13 @@ class BaseSetting {
 	int averageBugFixingTimeDays;
 	String firstCommitTimeStr;
 	String lastCommitTimeStr;
-
 	String startDate;
 	String endDate;
-	
 	int endGapDays;
-	
 	int totalExperimentalCommit; //commit
-	
 	float totalBuggyRatio; // commit - source key
 	int updateDays; //days  test set duration days
 	int gapDays; //days
-
-//	int averageTestSetSize; //numCommit
-//	
-//	int numOfRun; //number of run
-//	int developementPeriod;
-//	int sumOfGapAndTestPeriod;
-//	
-//	int totalExperimentalKey; //commit - source key
 
 	BaseSetting(){
 		projectName = null;
@@ -933,27 +802,13 @@ class BaseSetting {
 		averageBugFixingTimeDays = 0;
 		firstCommitTimeStr = null;
 		lastCommitTimeStr = null;
-
 		startDate = null;
 		endDate = null;
-		
 		endGapDays = 0;
 		totalExperimentalCommit = 0;
-		
 		totalBuggyRatio = 0;
-		
-//		averageTestSetSize = 0;
 		gapDays = 0;
-//		numOfRun = 0;
 		updateDays = 0;
-//		developementPeriod = 0;
-//		sumOfGapAndTestPeriod = 0;
-//		startGapStr = null;
-//		endGapStr = null;
-
-//		totalExperimentalKey = 0;
-		
-//		minimalTrainingSetSize = 0;
 	}
 	public void setDataPath(String dataPath) {
 		Pattern pattern = Pattern.compile("(.+)/(.+).arff");
@@ -965,19 +820,14 @@ class BaseSetting {
 		}
 		
 	}
-
 	
 	public String OutputPath() {
 		return outputPath;
 	}
-
-
-
+	
 	public void setOutputPath(String outputPath) {
 		this.outputPath = outputPath;
 	}
-
-
 
 	public String FirstCommitTimeStr() {
 		return firstCommitTimeStr;
@@ -1026,40 +876,6 @@ class BaseSetting {
 		this.updateDays = updateDays;
 	}
 
-//	public int getAverageTestSetSize() {
-//		return averageTestSetSize;
-//	}
-//
-//	public void setAverageTestSetSize(int averageTestSetSize) {
-//		this.averageTestSetSize = averageTestSetSize;
-//	}
-//
-//
-//	public int getNumOfRun() {
-//		return numOfRun;
-//	}
-//
-//	public void setNumOfRun(int numOfRun) {
-//		this.numOfRun = numOfRun;
-//	}
-//
-//
-//	public int getDevelopementPeriod() {
-//		return developementPeriod;
-//	}
-//
-//	public void setDevelopementPeriod(int developementPeriod) {
-//		this.developementPeriod = developementPeriod;
-//	}
-//
-//	public int getSumOfGapAndTestPeriod() {
-//		return sumOfGapAndTestPeriod;
-//	}
-//
-//	public void setSumOfGapAndTestPeriod(int sumOfGapAndTestPeriod) {
-//		this.sumOfGapAndTestPeriod = sumOfGapAndTestPeriod;
-//	}
-
 	public String StartDate() {
 		return startDate;
 	}
@@ -1094,14 +910,6 @@ class BaseSetting {
 		this.endGapDays = endGapDays;
 	}
 	
-//	public int getTotalExperimentalKey() {
-//		return totalExperimentalKey;
-//	}
-//	
-//	public void setTotalExperimentalKey(int totalExperimentalKey) {
-//		this.totalExperimentalKey = totalExperimentalKey;
-//	}
-
 	public float TotalBuggyRatio() {
 		return totalBuggyRatio;
 	}
@@ -1110,12 +918,4 @@ class BaseSetting {
 		this.totalBuggyRatio = totalBuggyRatio;
 	}
 
-//	public int getMinimalTrainingSetSize() {
-//		return minimalTrainingSetSize;
-//	}
-//
-//	public void setMinimalTrainingSetSize(int minimalTrainingSetSize) {
-//		this.minimalTrainingSetSize = minimalTrainingSetSize;
-//	}
-	
 }
