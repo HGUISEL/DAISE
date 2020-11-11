@@ -2,6 +2,7 @@ package edu.handong.csee.isel.pdp;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.Reader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -27,7 +28,6 @@ import org.apache.commons.io.FileUtils;
 public class OnlineMain {
 	String dataPath;
 	String BICpath;
-	
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
@@ -57,6 +57,7 @@ public class OnlineMain {
 				return;
 			}
 			baseSet.setDataPath(dataPath);
+			System.out.println(baseSet.OutputPath());
 			System.out.println("Project Name : " + baseSet.ProjectName());
 			System.out.println("Reference Path : " + baseSet.ReferenceFolderPath());
 			
@@ -265,19 +266,23 @@ public class OnlineMain {
 			for(int i = 1000; i <= 1600; i += 100) {
 				ArrayList<String> endDate_numOfCommit = calEndDateNumOfCommit(baseSet.StartDate(),i,commitTime_commitHash_experimental);
 				float bugRatio = calBuggyRatio(baseSet.StartDate(),endDate_numOfCommit.get(0),commitHash_isBuggy,commitTime_commitHash_experimental);
-				
+				endDate_numOfCommit.add(2,Integer.toString(i));
+				//endDate_numOfCommit : index 0 : endDate / index 1 : real number of Commit / index 2 : input number of Commit
 				tr_bugRatio_endDate_numOfCommit.put(bugRatio,endDate_numOfCommit);
 			}
 			
 			System.out.println();
-			float tr_bugRatio = tr_bugRatio_endDate_numOfCommit.firstKey();
-			ArrayList<String> endDate_numOfCommit =  tr_bugRatio_endDate_numOfCommit.get(tr_bugRatio);
+			float tra_bugRatio = tr_bugRatio_endDate_numOfCommit.firstKey();
+			ArrayList<String> endDate_numOfCommit =  tr_bugRatio_endDate_numOfCommit.get(tra_bugRatio);
 			String tr_endDate = endDate_numOfCommit.get(0);
 			String tr_numOfCommit = endDate_numOfCommit.get(1);
+			int default_Tr_numOfCommit = Integer.parseInt(endDate_numOfCommit.get(2));
+			baseSet.setDefault_Tr_size(default_Tr_numOfCommit);
 			
-			System.out.println("TrainingSet Bug Ratio : " + tr_bugRatio*100 +"%");
+			System.out.println("TrainingSet Bug Ratio : " + tra_bugRatio*100 +"%");
 			System.out.println("TrainingSet EndDate : " + tr_endDate);
 			System.out.println("TrainingSet numOfCommit : " + tr_numOfCommit);
+			System.out.println("TrainingSet default NumOfCommit : " + default_Tr_numOfCommit);
 			System.out.println();
 			
 			//Cal gap 1 -> 2 ... -> 5 and updateDays 30 -> 40 -> ... -> 100
@@ -315,7 +320,7 @@ public class OnlineMain {
 							float bugRatio = calBuggyRatio(fromDate,toDate,commitHash_isBuggy,commitTime_commitHash_experimental);
 //							System.out.println(bugRatio);
 							
-							if(bugRatio != 200) {
+							if((bugRatio != 200) && (bugRatio != 0)) {
 								run++;
 								sum += bugRatio;
 								bugRatios.add(bugRatio);
@@ -372,7 +377,7 @@ public class OnlineMain {
 			}
 			
 			if((baseSet.UpdateDays() == 0) && (baseSet.GapDays() == 0)) {
-				System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%");
+				System.out.println("##########################################");
 				System.out.println("best mean - variance : " + MV_gapDays_updateDays.firstKey());
 				System.out.println("gap + updateDays : " + MV_gapDays_updateDays.get(MV_gapDays_updateDays.firstKey()));
 				ArrayList<Integer> gapAndUpdate = MV_gapDays_updateDays.get(MV_gapDays_updateDays.firstKey());
@@ -388,95 +393,125 @@ public class OnlineMain {
 			}
 			
 			//make arff file
+			int run = 0;
 			
+				//default value
+			String trS = baseSet.StartDate();
+			String trE_gapS = null;//gap start
+			String gapE_teS = null;//test start
+			String teE = null;//test end
 			
-//			//set minimal training set
-//			baseSet.setMinimalTrainingSetSize((int)(baseSet.getTotalExperimentalCommit() * 0.6));
-////			int trainingSetSize = calTrainingSetSize(startDate,commitTime_commitHash_experimental,commitHash_isBuggy);
-//			
-//			//set first training set
-//			calTrainingSetSize(baseSet.getStartGapStr(),commitTime_commitHash_experimental,commitHash_isBuggy);
-//			
-//			baseSet.setAverageTestSetSize(baseSet.getTotalExperimentalCommit()/4);
-//			//set average test size 
-//			System.out.println("average test size : "+baseSet.getAverageTestSetSize());
+			ArrayList<Integer> tr_size = new ArrayList<>();
+			ArrayList<Integer> te_size = new ArrayList<>();
 			
-			//cal update time (test set Period)
-//			int averageTestPeriodDays = 0;
-//			int numOfCalTestPeriod = 0; //number of count : sumOfCommit > AverageTestSetSize
-//			
-//			int sumOfCommit = 0; //temp
-//			String fCommitTime = baseSet.getStartGapStr(); //temp
-//			String lCommitTime = null; //temp
-//			
-//			for(String commitTime : commitTime_commitHash_experimental.keySet()) {
-//				
-//				ArrayList<String> commitHash = commitTime_commitHash_experimental.get(commitTime);
-//				
-//				sumOfCommit += commitHash.size();
-//				
-//				if(sumOfCommit > baseSet.getAverageTestSetSize()) {
-//					lCommitTime = commitTime;
-//					averageTestPeriodDays += calDateBetweenAandB(fCommitTime,lCommitTime);
-//					numOfCalTestPeriod++;
-//					
-//					fCommitTime = commitTime;
-//					lCommitTime = null;
-//					sumOfCommit = 0;
-//				}
-//			}
-//			//set update time ==  test set period
-//			baseSet.setUpdateTimeDays(averageTestPeriodDays/numOfCalTestPeriod);
-//			System.out.println("UT : "+baseSet.getUpdateTimeDays());
-//			//set gap : bug-fixing time - test set time period (== update time)
-//			baseSet.setGapDays(baseSet.getAverageBugFixingTimeDays()-baseSet.getUpdateTimeDays());
-//			System.out.println("Gap : " + baseSet.getGapDays());
-//			
-//			//cal run
-//			int numOfTrainingSet = baseSet.getAverageTestSetSize(); //default training set size : my think : fist training set size (no in paper) -> test set size
-//			int numOfTestSet = baseSet.getAverageTestSetSize(); 
-//			int updateTimeDays = baseSet.getUpdateTimeDays(); //day
-//			int GapDays = baseSet.getGapDays(); //day
-//			int run = 0;
-//			String firstCommitDate = baseSet.getFirstCommitTimeStr();
-//			String lastCommitDate = baseSet.getLastCommitTimeStr();
-//			
-//			HashMap<Integer,RunDate> run_RunDate = new HashMap<>();
-//
-//				//init T time
-//			String T1 = firstCommitDate; //start training set date
-//			String T2 = null; //end tarining set date : start gap date
-//			String T3 = null; //end gap date : start test set date
-//			String T4 = firstCommitDate; //end test set date
-//			
-//			int realTriniingSet = 0;
-//			
-//			while(true) {
-//				RunDate runDate = new RunDate();
-//				
-//				if(!(T4.compareTo(lastCommitDate)<0)) {
-//					T4 = lastCommitDate;
-//					runDate.setT4(T4);
-//					run_RunDate.put(run,runDate);
-//					break;
-//				}
-//				T2 = setStartGapDate(T1,T2,GapDays,numOfTrainingSet,commitTime_commitHash_experimental);
-//				T3 = addDate(T2,GapDays);
-//				T3 = findNearDate(T3,commitTime_commitHash_experimental,"l");
-//				T4 = setStartTestSetDate(T3,run,numOfTestSet,commitTime_commitHash_experimental);
-//				
-//				runDate.setT2(T1);
-//				runDate.setT2(T2);
-//				runDate.setT3(T3);
-//				runDate.setT4(T4);
-//				
-//				run_RunDate.put(run,runDate);
-//				run++;
-//			}
+			ArrayList<Float> tr_bugRatio = new ArrayList<>();
+			ArrayList<Float> te_bugRatio = new ArrayList<>();
 			
+			ArrayList<RunDate> runDates = new ArrayList<>();
 			
-			//BIC re label!!
+			while(true) {
+				if(teE != null && baseSet.EndDate().compareTo(teE) <= 0) {
+					System.out.println(baseSet.EndDate());
+					break;
+				}
+//				System.out.println("T1 : "+T1);
+				//cal training set end date (T2)
+				ArrayList<String> tr_commitHash = new ArrayList<String>();
+				int count = 0;
+				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
+					if(!(trS.compareTo(commitTime)<=0))
+						continue;
+					
+					ArrayList<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
+					tr_commitHash.addAll(commitHashs);
+					count += commitHashs.size();
+					
+					if(count == baseSet.Default_Tr_size()) {
+						tr_size.add(count);
+						trE_gapS = commitTime; //endDate
+					}else if(count > baseSet.Default_Tr_size()) {
+						tr_size.add(count - commitHashs.size());
+						break;
+					}
+					trE_gapS = commitTime;
+				}
+//				System.out.println("T2 : "+T2);
+				
+				//check TR bugRatio
+				float bugRatio = calBuggyRatio(trS,trE_gapS,commitHash_isBuggy,commitTime_commitHash_experimental);
+				
+				if((bugRatio == 200) || (bugRatio == 0)) {
+					trS = addDate(trS,baseSet.UpdateDays());
+					trS = findNearDate(trS,commitTime_commitHash,"l");
+					continue;
+				}
+				tr_bugRatio.add(bugRatio);
+				//save tr data to arff
+				save2Arff(run,tr_commitHash,commitHash_data,attributeLineList,directoryPath,"tr");
+				
+				//jump gap month
+				gapE_teS = addMonth(trE_gapS,baseSet.GapDays());
+				
+//				System.out.println("T3 : "+T3);
+				
+				//cal test
+				ArrayList<String> te_commitHash = new ArrayList<String>();
+				
+				teE = addDate(gapE_teS,baseSet.UpdateDays());
+				System.out.println("T4 : "+teE);
+				
+				//check test bug ratio
+				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_isBuggy,commitTime_commitHash_experimental);
+				
+				if((bugRatio == 200) || (bugRatio == 0)) {
+					trS = addDate(trS,baseSet.UpdateDays());
+					trS = findNearDate(trS,commitTime_commitHash,"l");
+					continue;
+				}
+				te_bugRatio.add(bugRatio);
+				
+				//
+				count = 0;
+				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
+					if(!(gapE_teS.compareTo(commitTime)<=0 && commitTime.compareTo(teE)<0)) // only consider BISha1 whose date is bewteen startDate and endDate
+						continue;
+					ArrayList<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
+					te_commitHash.addAll(commitHashs);
+					count += commitHashs.size();
+				}
+				te_size.add(count);
 
+				//save tr data to arff
+				save2Arff(run,te_commitHash,commitHash_data,attributeLineList,directoryPath,"te");
+				
+				//save information Ts
+				RunDate runDate = new RunDate();
+				runDate.setTrS(trS);
+				runDate.setTrE_gapS(trE_gapS);
+				runDate.setGapE_teS(gapE_teS);
+				runDate.setTeE(teE);
+				runDates.add(run,runDate);
+				
+				//update T1
+				trS = addDate(trS,baseSet.UpdateDays());
+				trS = findNearDate(trS,commitTime_commitHash,"l");
+				run++;
+
+//				break;
+			}
+			
+			//print result
+			for(int i = 0; i < run; i++) {
+				RunDate runDate = runDates.get(i);
+				System.out.println("-==-=--==--=-=-=-=-==-==-===-=-=-=-=-=-==-===-=-=-=-");
+				System.out.println("T1 : "+runDate.getTrS()+"	T2 : "+runDate.getTrE_gapS());
+				System.out.println("T3 : "+runDate.getGapE_teS()+"	T4 : "+runDate.getTeE());
+				System.out.println();
+				System.out.println("training set size : "+tr_size.get(i)+"   Bug Ratio : "+tr_bugRatio.get(i));
+				System.out.println("test set size : "+te_size.get(i)+" 	  Bug Ratio : "+te_bugRatio.get(i));
+				System.out.println();
+			}
+			
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 			}
@@ -485,6 +520,30 @@ public class OnlineMain {
 	
 
 	
+	private void save2Arff(int run, ArrayList<String> tr_commitHash, HashMap<String, ArrayList<String>> commitHash_data,
+			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
+		File newDeveloperArff = new File(directoryPath +File.separator+run+"_"+string+".arff");
+		StringBuffer newContentBuf = new StringBuffer();
+		
+		//write attribute
+		for (String line : attributeLineList) {
+			if(line.startsWith("@attribute meta_data-commitTime")) continue;
+			if(line.startsWith("@attribute Key {")) continue;
+			newContentBuf.append(line + "\n");
+		}
+		
+		for(String commitHash : commitHash_data.keySet()) {
+			if(tr_commitHash.contains(commitHash)) {
+				for(String data : commitHash_data.get(commitHash)) {
+					newContentBuf.append(data + "\n");
+				}
+			}
+		}
+		
+		FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+		
+	}
+
 	private String addMonth(String gap_startDate, int m) throws ParseException {
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
 		Calendar cal = Calendar.getInstance(); 
@@ -674,6 +733,8 @@ public class OnlineMain {
 			if(outputPath.endsWith(File.separator)) {
 				outputPath = outputPath.substring(0, outputPath.lastIndexOf(File.separator));
 				baseSet.setOutputPath(outputPath);
+			}else {
+				baseSet.setOutputPath(outputPath);
 			}
 			
 			if(cmd.hasOption("s") && cmd.hasOption("e")) {
@@ -794,6 +855,7 @@ class BaseSetting {
 	float totalBuggyRatio; // commit - source key
 	int updateDays; //days  test set duration days
 	int gapDays; //days
+	int default_Tr_size;
 
 	BaseSetting(){
 		projectName = null;
@@ -809,6 +871,7 @@ class BaseSetting {
 		totalBuggyRatio = 0;
 		gapDays = 0;
 		updateDays = 0;
+		default_Tr_size = 0;
 	}
 	public void setDataPath(String dataPath) {
 		Pattern pattern = Pattern.compile("(.+)/(.+).arff");
@@ -917,5 +980,58 @@ class BaseSetting {
 	public void setTotalBuggyRatio(float totalBuggyRatio) {
 		this.totalBuggyRatio = totalBuggyRatio;
 	}
+	public int Default_Tr_size() {
+		return default_Tr_size;
+	}
+	public void setDefault_Tr_size(int default_Tr_size) {
+		this.default_Tr_size = default_Tr_size;
+	}
 
+}
+
+class RunDate {
+	String trS;
+	String trE_gapS;
+	String gapE_teS;
+	String teE;
+	
+	RunDate(){
+		trS = null;
+		trE_gapS = null;
+		gapE_teS = null;
+		teE = null;
+	}
+
+	public String getTrS() {
+		return trS;
+	}
+
+	public void setTrS(String t1) {
+		trS = t1;
+	}
+
+	public String getTrE_gapS() {
+		return trE_gapS;
+	}
+
+	public void setTrE_gapS(String t2) {
+		trE_gapS = t2;
+	}
+
+	public String getGapE_teS() {
+		return gapE_teS;
+	}
+
+	public void setGapE_teS(String t3) {
+		gapE_teS = t3;
+	}
+
+	public String getTeE() {
+		return teE;
+	}
+
+	public void setTeE(String t4) {
+		teE = t4;
+	}
+	
 }
