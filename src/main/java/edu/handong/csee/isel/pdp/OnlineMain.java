@@ -141,7 +141,10 @@ public class OnlineMain {
 					}
 				}
 			}
-			
+			if(dataLineList.size() < 10) {
+				System.out.println("Wrong arff file");
+				System.exit(0);
+			}
 			TreeMap<String,ArrayList<String>> commitTime_commitHash = new TreeMap<>();
 			HashMap<String,ArrayList<String>> commitHash_data = new HashMap<>();
 			HashMap<String,ArrayList<Boolean>> commitHash_isBuggy = new HashMap<>();
@@ -226,7 +229,7 @@ public class OnlineMain {
 					}
 					
 					System.out.println("ExpCh : "+baseSet.TotalExperimentalCommit());
-					if(baseSet.TotalExperimentalCommit() > 10000) 
+					if((baseSet.TotalExperimentalCommit() > 10000) || commitHash_data.size() < 10000) 
 						break;
 					
 					defaultStartGap -= 30;
@@ -239,6 +242,7 @@ public class OnlineMain {
 				for(String commitTime : commitTime_commitHash.keySet()) {
 					if(!(baseSet.StartDate().compareTo(commitTime)<=0 && commitTime.compareTo(baseSet.EndDate())<=0))
 						continue;
+					//TODO 전체 커밋 해쉬가 10000개 안되는 경우에는...? - 일단은 첫번째 설정으로 돌도록 함 
 					ArrayList<String> commitHash = commitTime_commitHash.get(commitTime);
 					baseSet.setTotalExperimentalCommit(commitHash.size());
 					commitTime_commitHash_experimental.put(commitTime, commitHash);
@@ -263,7 +267,7 @@ public class OnlineMain {
 			TreeMap<Float,ArrayList<String>> tr_bugRatio_endDate_numOfCommit = new TreeMap<>(Collections.reverseOrder()); //bug ratio reverse
 			
 			
-			for(int i = 1000; i <= 1600; i += 100) {
+			for(int i = 1000; i <= 2000; i += 100) {
 				ArrayList<String> endDate_numOfCommit = calEndDateNumOfCommit(baseSet.StartDate(),i,commitTime_commitHash_experimental);
 				float bugRatio = calBuggyRatio(baseSet.StartDate(),endDate_numOfCommit.get(0),commitHash_isBuggy,commitTime_commitHash_experimental);
 				endDate_numOfCommit.add(2,Integer.toString(i));
@@ -518,7 +522,7 @@ public class OnlineMain {
 		}
 	}
 	
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	private void save2Arff(int run, ArrayList<String> tr_commitHash, HashMap<String, ArrayList<String>> commitHash_data,
 			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
