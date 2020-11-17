@@ -2,7 +2,6 @@ package edu.handong.csee.isel.pdp;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.Reader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -12,6 +11,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -145,10 +145,9 @@ public class OnlineMain {
 				System.out.println("Wrong arff file");
 				System.exit(0);
 			}
-			TreeMap<String,ArrayList<String>> commitTime_commitHash = new TreeMap<>();
+			TreeMap<String,TreeSet<String>> commitTime_commitHash = new TreeMap<>();
 			HashMap<String,ArrayList<String>> commitHash_data = new HashMap<>();
 			HashMap<String,ArrayList<Boolean>> commitHash_isBuggy = new HashMap<>();
-
 			
 			for(String line : dataLineList) {
 				String commitTime = parsingCommitTime(line,firstAttrCommitTime,indexOfCommitTime);
@@ -157,12 +156,13 @@ public class OnlineMain {
 				boolean isBuggy  = parsingBugCleanLabel(line,firstAttrLabel,defaultLabel);
 				
 				//put2commitTime_commitHash
-				ArrayList<String> commitHashs;
+				TreeSet<String> commitHashs;
 				if(commitTime_commitHash.containsKey(commitTime)) {
 					commitHashs = commitTime_commitHash.get(commitTime);
+//					if(commitHashs.contains(commitHash)) System.out.println("222");
 					commitHashs.add(commitHash);
 				}else {
-					commitHashs = new ArrayList<>();
+					commitHashs = new TreeSet<>();
 					commitHashs.add(commitHash);
 					commitTime_commitHash.put(commitTime, commitHashs);
 				}
@@ -197,8 +197,15 @@ public class OnlineMain {
 			System.out.println(baseSet.LastCommitTimeStr());
 			System.out.println();
 			
+			//total change
+			baseSet.setTotalChange(commitHash_data.size());
+			if(baseSet.TotalChange() < 5000) {
+				System.out.println("The num of total change is less than 5000.\nBye!");
+				System.exit(0);
+			}
+			
 			//total experiment change
-			TreeMap<String,ArrayList<String>> commitTime_commitHash_experimental = null;
+			TreeMap<String,TreeSet<String>> commitTime_commitHash_experimental = null;
 			int defaultStartGap = 365 * 3; // startGap default : 3 years 
 			if(baseSet.StartDate() == null) {
 				while(true) {
@@ -223,13 +230,13 @@ public class OnlineMain {
 					for(String commitTime : commitTime_commitHash.keySet()) {
 						if(!(baseSet.StartDate().compareTo(commitTime)<=0 && commitTime.compareTo(baseSet.EndDate())<=0))
 							continue;
-						ArrayList<String> commitHash = commitTime_commitHash.get(commitTime);
+						TreeSet<String> commitHash = commitTime_commitHash.get(commitTime);
 						baseSet.setTotalExperimentalCommit(commitHash.size());
 						commitTime_commitHash_experimental.put(commitTime, commitHash);
 					}
 					
 					System.out.println("ExpCh : "+baseSet.TotalExperimentalCommit());
-					if((baseSet.TotalExperimentalCommit() > 10000) || commitHash_data.size() < 10000) 
+					if((baseSet.TotalExperimentalCommit() > 5000) ) 
 						break;
 					
 					defaultStartGap -= 30;
@@ -243,7 +250,7 @@ public class OnlineMain {
 					if(!(baseSet.StartDate().compareTo(commitTime)<=0 && commitTime.compareTo(baseSet.EndDate())<=0))
 						continue;
 					//TODO 전체 커밋 해쉬가 10000개 안되는 경우에는...? - 일단은 첫번째 설정으로 돌도록 함 
-					ArrayList<String> commitHash = commitTime_commitHash.get(commitTime);
+					TreeSet<String> commitHash = commitTime_commitHash.get(commitTime);
 					baseSet.setTotalExperimentalCommit(commitHash.size());
 					commitTime_commitHash_experimental.put(commitTime, commitHash);
 				}
@@ -257,7 +264,7 @@ public class OnlineMain {
 			System.out.println("real str date : "+baseSet.StartDate());
 			System.out.println("real end date : "+baseSet.EndDate());
 			System.out.println();
-			
+			System.exit(0);
 			//set total buggy rate
 			float totalBugRatio = calBuggyRatio(baseSet.StartDate(),baseSet.EndDate(),commitHash_isBuggy,commitTime_commitHash_experimental);
 			baseSet.setTotalBuggyRatio(totalBugRatio);
@@ -295,23 +302,23 @@ public class OnlineMain {
 			int updateDays = 30;
 
 			while(true) {
-				System.out.println("===============================================");
+//				System.out.println("===============================================");
 				String gap_startDate = tr_endDate;
 				String gap_endDate = addMonth(gap_startDate,gapDays);
-				System.out.println(gap_endDate);
+//				System.out.println(gap_endDate);
 				
-				System.out.println("Gap startDate : " + gap_startDate);
-				System.out.println("Gap endDate : " + gap_endDate);
-				System.out.println("Gap Month : " + gapDays);
-				System.out.println();
+//				System.out.println("Gap startDate : " + gap_startDate);
+//				System.out.println("Gap endDate : " + gap_endDate);
+//				System.out.println("Gap Month : " + gapDays);
+//				System.out.println();
 				
 				TreeMap<Float, Integer> MV_updateDays = new TreeMap<>(Collections.reverseOrder());
 				
 				if(!(baseSet.UpdateDays() > 0 )) {
 					for(updateDays = 30; updateDays <= 100; updateDays += 10) {
 						String fromDate = gap_endDate;
-						System.out.println("-------------------------------------------------------");
-						System.out.println("updateDays : " + updateDays);
+//						System.out.println("-------------------------------------------------------");
+//						System.out.println("updateDays : " + updateDays);
 						
 						int run = 0;
 						ArrayList<Float> bugRatios = new ArrayList<>();
@@ -335,10 +342,10 @@ public class OnlineMain {
 							fromDate = toDate;
 							
 							if(baseSet.EndDate().compareTo(fromDate)<=0) {
-								System.out.println("run : " + run);
-								System.out.println("fromDate : " + before);
-								System.out.println("toDate(new end) : " + fromDate); //이제 real end date가 된다. 
-								System.out.println(baseSet.EndDate()); //end data가 늘어남 
+//								System.out.println("run : " + run);
+//								System.out.println("fromDate : " + before);
+//								System.out.println("toDate(new end) : " + fromDate); //이제 real end date가 된다. 
+//								System.out.println(baseSet.EndDate()); //end data가 늘어남 
 								break;
 							}
 							
@@ -353,17 +360,17 @@ public class OnlineMain {
 						
 						MV_updateDays.put((meanBugRatio - varianceBugRatio), updateDays);
 						
-						System.out.println();
-						System.out.println("mean bug ratio : " + meanBugRatio);
-						System.out.println("variance bug ratio : " + varianceBugRatio);
-						System.out.println("run : " + bugRatios.size());
-						System.out.println();
+//						System.out.println();
+//						System.out.println("mean bug ratio : " + meanBugRatio);
+//						System.out.println("variance bug ratio : " + varianceBugRatio);
+//						System.out.println("run : " + bugRatios.size());
+//						System.out.println();
 					} //for (cal best update days)
 					//pick best 
 					ArrayList<Integer> gap_update = new ArrayList<Integer>();
-					System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%");
-					System.out.println("mean - variance : " + MV_updateDays.firstKey());
-					System.out.println("updateDays : " + MV_updateDays.get(MV_updateDays.firstKey()));
+//					System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%");
+//					System.out.println("mean - variance : " + MV_updateDays.firstKey());
+//					System.out.println("updateDays : " + MV_updateDays.get(MV_updateDays.firstKey()));
 					
 					gap_update.add(0,gapDays);
 					gap_update.add(1,MV_updateDays.get(MV_updateDays.firstKey()));
@@ -384,6 +391,7 @@ public class OnlineMain {
 				System.out.println("##########################################");
 				System.out.println("best mean - variance : " + MV_gapDays_updateDays.firstKey());
 				System.out.println("gap + updateDays : " + MV_gapDays_updateDays.get(MV_gapDays_updateDays.firstKey()));
+				System.out.println("##########################################");
 				ArrayList<Integer> gapAndUpdate = MV_gapDays_updateDays.get(MV_gapDays_updateDays.firstKey());
 				baseSet.setGapDays(gapAndUpdate.get(0));
 				baseSet.setUpdateDays(gapAndUpdate.get(1));
@@ -413,20 +421,17 @@ public class OnlineMain {
 			
 			ArrayList<RunDate> runDates = new ArrayList<>();
 			
-			while(true) {
-				if(teE != null && baseSet.EndDate().compareTo(teE) <= 0) {
-					System.out.println(baseSet.EndDate());
-					break;
-				}
+			while(!(teE != null) && !(baseSet.EndDate().compareTo(teE) <= 0)) { //end data가 teE보다 작지 않으면  
+				
 //				System.out.println("T1 : "+T1);
 				//cal training set end date (T2)
-				ArrayList<String> tr_commitHash = new ArrayList<String>();
+				TreeSet<String> tr_commitHash = new TreeSet<String>();
 				int count = 0;
 				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 					if(!(trS.compareTo(commitTime)<=0))
 						continue;
 					
-					ArrayList<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
+					TreeSet<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
 					tr_commitHash.addAll(commitHashs);
 					count += commitHashs.size();
 					
@@ -459,7 +464,7 @@ public class OnlineMain {
 //				System.out.println("T3 : "+T3);
 				
 				//cal test
-				ArrayList<String> te_commitHash = new ArrayList<String>();
+				TreeSet<String> te_commitHash = new TreeSet<String>();
 				
 				teE = addDate(gapE_teS,baseSet.UpdateDays());
 				System.out.println("T4 : "+teE);
@@ -477,9 +482,9 @@ public class OnlineMain {
 				//
 				count = 0;
 				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
-					if(!(gapE_teS.compareTo(commitTime)<=0 && commitTime.compareTo(teE)<0)) // only consider BISha1 whose date is bewteen startDate and endDate
+					if(!(gapE_teS.compareTo(commitTime)<=0 && commitTime.compareTo(teE)<0))
 						continue;
-					ArrayList<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
+					TreeSet<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
 					te_commitHash.addAll(commitHashs);
 					count += commitHashs.size();
 				}
@@ -513,6 +518,7 @@ public class OnlineMain {
 				System.out.println();
 				System.out.println("training set size : "+tr_size.get(i)+"   Bug Ratio : "+tr_bugRatio.get(i));
 				System.out.println("test set size : "+te_size.get(i)+" 	  Bug Ratio : "+te_bugRatio.get(i));
+				System.out.println("-==-=--==--=-=-=-=-==-==-===-=-=-=-=-=-==-===-=-=-=-");
 				System.out.println();
 			}
 			
@@ -524,7 +530,7 @@ public class OnlineMain {
 	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private void save2Arff(int run, ArrayList<String> tr_commitHash, HashMap<String, ArrayList<String>> commitHash_data,
+	private void save2Arff(int run, TreeSet<String> tr_commitHash, HashMap<String, ArrayList<String>> commitHash_data,
 			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
 		File newDeveloperArff = new File(directoryPath +File.separator+run+"_"+string+".arff");
 		StringBuffer newContentBuf = new StringBuffer();
@@ -561,13 +567,13 @@ public class OnlineMain {
 	}
 
 	private ArrayList<String> calEndDateNumOfCommit(String startDate, int numOfCommit,
-			TreeMap<String, ArrayList<String>> commitTime_commitHash_experimental) {
+			TreeMap<String, TreeSet<String>> commitTime_commitHash_experimental) {
 		ArrayList<String> endDate_numOfCommit = new ArrayList<String>();
 		int count = 0;
 		for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 			if(!(startDate.compareTo(commitTime)<=0))
 				continue;
-			ArrayList<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
+			TreeSet<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
 			count += commitHashs.size();
 			
 			if(count == numOfCommit) {
@@ -585,14 +591,14 @@ public class OnlineMain {
 	}
 
 	private float calBuggyRatio(String startGapStr, String endGapStr,
-			HashMap<String, ArrayList<Boolean>> commitHash_isBuggy, TreeMap<String, ArrayList<String>> commitTime_commitHash) {
+			HashMap<String, ArrayList<Boolean>> commitHash_isBuggy, TreeMap<String, TreeSet<String>> commitTime_commitHash_experimental) {
 		int buggyKey = 0;
 		int totalKey = 0;
 		
-		for(String commitTime : commitTime_commitHash.keySet()) {
+		for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 			if(!(startGapStr.compareTo(commitTime)<=0 && commitTime.compareTo(endGapStr)<=0))
 				continue;
-			ArrayList<String> commitHashs = commitTime_commitHash.get(commitTime);
+			TreeSet<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
 			for(String commitHash : commitHashs) {
 				ArrayList<Boolean> isBuggys = commitHash_isBuggy.get(commitHash);
 				totalKey += isBuggys.size();
@@ -625,16 +631,16 @@ public class OnlineMain {
 		}
 	}
 
-	private String findNearDate(String time, TreeMap<String, ArrayList<String>> commitTime_commitHash_experimental,
+	private String findNearDate(String time, TreeMap<String, TreeSet<String>> commitTime_commitHash,
 			String string) {
 		if(string.compareTo("r") == 0) {
-			for(String commitTime : commitTime_commitHash_experimental.keySet()) {
+			for(String commitTime : commitTime_commitHash.keySet()) {
 				if(!(time.compareTo(commitTime) < 0)) continue;
 				return commitTime;
 			}
 		}else if(string.compareTo("l") == 0) {
 			String beforeCommitTime = null;
-			for(String commitTime : commitTime_commitHash_experimental.keySet()) {
+			for(String commitTime : commitTime_commitHash.keySet()) {
 				if(!(time.compareTo(commitTime) < 0)) {
 					beforeCommitTime = commitTime;
 					continue;
@@ -860,6 +866,7 @@ class BaseSetting {
 	int updateDays; //days  test set duration days
 	int gapDays; //days
 	int default_Tr_size;
+	int totalChange;
 
 	BaseSetting(){
 		projectName = null;
@@ -876,6 +883,7 @@ class BaseSetting {
 		gapDays = 0;
 		updateDays = 0;
 		default_Tr_size = 0;
+		totalChange = 0;
 	}
 	public void setDataPath(String dataPath) {
 		Pattern pattern = Pattern.compile("(.+)/(.+).arff");
@@ -990,7 +998,13 @@ class BaseSetting {
 	public void setDefault_Tr_size(int default_Tr_size) {
 		this.default_Tr_size = default_Tr_size;
 	}
-
+	public int TotalChange() {
+		return totalChange;
+	}
+	public void setTotalChange(int totalChange) {
+		this.totalChange = totalChange;
+	}
+	
 }
 
 class RunDate {
