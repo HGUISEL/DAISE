@@ -1,7 +1,10 @@
 package edu.handong.csee.isel.pdp;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Reader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -22,6 +25,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 
@@ -199,7 +203,7 @@ public class OnlineMain {
 			
 			//total change
 			baseSet.setTotalChange(commitHash_data.size());
-			if(baseSet.TotalChange() < 5000) {
+			if(baseSet.TotalChange() < 2000) {
 				System.out.println("The num of total change is less than 5000.\nBye!");
 				System.exit(0);
 			}
@@ -236,7 +240,7 @@ public class OnlineMain {
 					}
 					
 					System.out.println("ExpCh : "+baseSet.TotalExperimentalCommit());
-					if((baseSet.TotalExperimentalCommit() > 5000) ) 
+					if((baseSet.TotalExperimentalCommit() > 2000) ) 
 						break;
 					
 					defaultStartGap -= 30;
@@ -264,7 +268,7 @@ public class OnlineMain {
 			System.out.println("real str date : "+baseSet.StartDate());
 			System.out.println("real end date : "+baseSet.EndDate());
 			System.out.println();
-			System.exit(0);
+//			System.exit(0);
 			//set total buggy rate
 			float totalBugRatio = calBuggyRatio(baseSet.StartDate(),baseSet.EndDate(),commitHash_isBuggy,commitTime_commitHash_experimental);
 			baseSet.setTotalBuggyRatio(totalBugRatio);
@@ -274,12 +278,13 @@ public class OnlineMain {
 			TreeMap<Float,ArrayList<String>> tr_bugRatio_endDate_numOfCommit = new TreeMap<>(Collections.reverseOrder()); //bug ratio reverse
 			
 			
-			for(int i = 1000; i <= 2000; i += 100) {
+			for(int i = 1000; ; i += 100) {
 				ArrayList<String> endDate_numOfCommit = calEndDateNumOfCommit(baseSet.StartDate(),i,commitTime_commitHash_experimental);
 				float bugRatio = calBuggyRatio(baseSet.StartDate(),endDate_numOfCommit.get(0),commitHash_isBuggy,commitTime_commitHash_experimental);
 				endDate_numOfCommit.add(2,Integer.toString(i));
 				//endDate_numOfCommit : index 0 : endDate / index 1 : real number of Commit / index 2 : input number of Commit
 				tr_bugRatio_endDate_numOfCommit.put(bugRatio,endDate_numOfCommit);
+				if((i >= 2000) && !(tr_bugRatio_endDate_numOfCommit.firstKey() == 0)) break;
 			}
 			
 			System.out.println();
@@ -421,7 +426,7 @@ public class OnlineMain {
 			
 			ArrayList<RunDate> runDates = new ArrayList<>();
 			
-			while(!(teE != null) && !(baseSet.EndDate().compareTo(teE) <= 0)) { //end data가 teE보다 작지 않으면  
+			while(!(teE != null) || !(baseSet.EndDate().compareTo(teE) <= 0)) { //end data가 teE보다 작지 않으면  
 				
 //				System.out.println("T1 : "+T1);
 				//cal training set end date (T2)
@@ -455,8 +460,6 @@ public class OnlineMain {
 					continue;
 				}
 				tr_bugRatio.add(bugRatio);
-				//save tr data to arff
-				save2Arff(run,tr_commitHash,commitHash_data,attributeLineList,directoryPath,"tr");
 				
 				//jump gap month
 				gapE_teS = addMonth(trE_gapS,baseSet.GapDays());
@@ -478,6 +481,9 @@ public class OnlineMain {
 					continue;
 				}
 				te_bugRatio.add(bugRatio);
+				
+				//save tr data to arff
+				save2Arff(run,tr_commitHash,commitHash_data,attributeLineList,directoryPath,"tr");
 				
 				//
 				count = 0;
@@ -510,17 +516,18 @@ public class OnlineMain {
 			}
 			
 			//print result
-			for(int i = 0; i < run; i++) {
-				RunDate runDate = runDates.get(i);
-				System.out.println("-==-=--==--=-=-=-=-==-==-===-=-=-=-=-=-==-===-=-=-=-");
-				System.out.println("T1 : "+runDate.getTrS()+"	T2 : "+runDate.getTrE_gapS());
-				System.out.println("T3 : "+runDate.getGapE_teS()+"	T4 : "+runDate.getTeE());
-				System.out.println();
-				System.out.println("training set size : "+tr_size.get(i)+"   Bug Ratio : "+tr_bugRatio.get(i));
-				System.out.println("test set size : "+te_size.get(i)+" 	  Bug Ratio : "+te_bugRatio.get(i));
-				System.out.println("-==-=--==--=-=-=-=-==-==-===-=-=-=-=-=-==-===-=-=-=-");
-				System.out.println();
-			}
+			saveResult(runDates,tr_size,tr_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
+//			for(int i = 0; i < run; i++) {
+//				RunDate runDate = runDates.get(i);
+//				System.out.println("-==-=--==--=-=-=-=-==-==-===-=-=-=-=-=-==-===-=-=-=-");
+//				System.out.println("T1 : "+runDate.getTrS()+"	T2 : "+runDate.getTrE_gapS());
+//				System.out.println("T3 : "+runDate.getGapE_teS()+"	T4 : "+runDate.getTeE());
+//				System.out.println();
+//				System.out.println("training set size : "+tr_size.get(i)+"   Bug Ratio : "+tr_bugRatio.get(i));
+//				System.out.println("test set size : "+te_size.get(i)+" 	  Bug Ratio : "+te_bugRatio.get(i));
+//				System.out.println("-==-=--==--=-=-=-=-==-==-===-=-=-=-=-=-==-===-=-=-=-");
+//				System.out.println();
+//			}
 			
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -530,6 +537,42 @@ public class OnlineMain {
 	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private void saveResult(ArrayList<RunDate> runDates, ArrayList<Integer> tr_size, ArrayList<Float> tr_bugRatio,
+			ArrayList<Integer> te_size, ArrayList<Float> te_bugRatio, String directoryPath, int run, BaseSetting baseSet2) throws Exception {
+		String resultCSVPath = directoryPath + File.separator + "Run_Information.csv";
+		BufferedWriter writer = new BufferedWriter(new FileWriter(resultCSVPath));
+		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("TrSt","TrEn_GapSt","TrSize","TrBug%","GapEn_TeSt","TeEn","TeSize","TeBug%"));
+		for(int i = 0; i < run; i++) {
+			RunDate runDate = runDates.get(i);
+			csvPrinter.printRecord(runDate.getTrS(),runDate.getTrE_gapS(),tr_size.get(i),tr_bugRatio.get(i)*100,runDate.getGapE_teS(),runDate.getTeE(),te_size.get(i),te_bugRatio.get(i)*100);
+		}
+		csvPrinter.close();
+		writer.close();
+		
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(directoryPath + File.separator + "Project_Information.txt")));
+		
+		bufferedWriter.write("total Commit : "+baseSet.TotalChange());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("firstCommitTimeStr : "+baseSet.FirstCommitTimeStr());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("lastCommitTimeStr : "+baseSet.LastCommitTimeStr());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("Real startDate : "+baseSet.StartDate());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("Real endDate : "+baseSet.EndDate());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("total Experimental Commit : "+baseSet.TotalExperimentalCommit());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("totalBuggyRatio% : "+baseSet.TotalBuggyRatio()*100);
+		bufferedWriter.write("\n");
+		bufferedWriter.write("gapDays (Month) : "+baseSet.GapDays());
+		bufferedWriter.write("\n");
+		bufferedWriter.write("updateDays (Day) : "+baseSet.UpdateDays());
+		bufferedWriter.write("\n");
+		bufferedWriter.close();
+		
+	}
+
 	private void save2Arff(int run, TreeSet<String> tr_commitHash, HashMap<String, ArrayList<String>> commitHash_data,
 			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
 		File newDeveloperArff = new File(directoryPath +File.separator+run+"_"+string+".arff");
