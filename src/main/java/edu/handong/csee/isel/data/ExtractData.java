@@ -289,9 +289,7 @@ public class ExtractData {
 				"meta_data-developerExperience",
 				"meta_data-REXP",
 				"meta_data-SEXP",
-				"meta_data-LT",
-				"meta_data-commitTime",
-				"Key"
+				"meta_data-LT"
 				));
 	}
 	
@@ -313,8 +311,7 @@ public class ExtractData {
 				"meta_data-developerExperience",
 				"meta_data-REXP",
 				"meta_data-SEXP",
-				"meta_data-LT",
-				"meta_data-commitTime"
+				"meta_data-LT"
 				));
 	}
 }

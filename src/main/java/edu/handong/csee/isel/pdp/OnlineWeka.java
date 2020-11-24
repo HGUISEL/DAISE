@@ -52,6 +52,8 @@ public class OnlineWeka {
 			fileName.add(file.getName());
 		}
 		
+		if(!fileName.contains("Project_Information.txt")) System.exit(0);
+		
 		for(int run = 0; ; run++) {
 			if(!(fileName.contains(run+"_tr.arff"))) {
 				break;

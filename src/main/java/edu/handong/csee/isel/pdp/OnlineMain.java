@@ -82,7 +82,7 @@ public class OnlineMain {
 			}
 
 			//mk result directory
-			File PDPDir = new File(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-online"+File.separator);
+			File PDPDir = new File(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+File.separator);
 			String directoryPath = PDPDir.getAbsolutePath();
 			PDPDir.mkdir();
 
@@ -424,6 +424,8 @@ public class OnlineMain {
 			String trE_gapS = null;//gap start
 			String gapE_teS = null;//test start
 			String teE = null;//test end
+			
+			String beforeTeE = null;
 
 			ArrayList<Integer> tr_size = new ArrayList<>();
 			ArrayList<Integer> te_size = new ArrayList<>();
@@ -478,6 +480,11 @@ public class OnlineMain {
 
 				teE = addDate(gapE_teS,baseSet.UpdateDays());
 				System.out.println("T4 : "+teE);
+				
+				if(beforeTeE != null && teE.compareTo(beforeTeE) == 0) {
+					System.out.println("Error : "+baseSet.ProjectName());
+					System.exit(0);
+				}
 
 				//check test bug ratio
 				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_isBuggy,commitTime_commitHash_experimental);
@@ -513,7 +520,7 @@ public class OnlineMain {
 				runDate.setGapE_teS(gapE_teS);
 				runDate.setTeE(teE);
 				runDates.add(run,runDate);
-
+				beforeTeE = teE;
 				//update T1
 				trS = addDate(trS,baseSet.UpdateDays());
 				trS = findNearDate(trS,commitTime_commitHash,"l");
