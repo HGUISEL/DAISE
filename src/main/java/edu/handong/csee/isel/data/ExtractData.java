@@ -49,6 +49,7 @@ public class ExtractData {
 		
 		initKameiMetric();
 		initOnlineMetric();
+		initPDPMetric();
 		
 		String content = FileUtils.readFileToString(originArff, "UTF-8");
 		String[] lines = content.split("\n");
@@ -72,13 +73,17 @@ public class ExtractData {
 						if(!OnlineAttr.contains(m.group(1))) {
 							onlineAttriIndex.put(Integer.toString(attrIndex),line);
 						}
+						if(!PDPAttr.contains(m.group(1))){
+							PDPAttrIndex.put(Integer.toString(attrIndex),line);
+						}
 						
 					}
 					
-//					if(line.startsWith("@attribute Key ")) {
-//						kameiAttrIndex.put(Integer.toString(attrIndex),line);
-//						onlineAttriIndex.put(Integer.toString(attrIndex),line);
-//					}
+					if(line.startsWith("@attribute Key ")) {
+						kameiAttrIndex.put(Integer.toString(attrIndex),line);
+						onlineAttriIndex.put(Integer.toString(attrIndex),line);
+						PDPAttrIndex.put(Integer.toString(attrIndex),line);
+					}
 					
 					
 					attributeLineList.add(line);
