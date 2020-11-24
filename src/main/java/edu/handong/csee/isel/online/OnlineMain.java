@@ -29,6 +29,8 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 
+import edu.handong.csee.isel.data.ExtractData;
+
 public class OnlineMain {
 	String dataPath;
 	String BICpath;
@@ -80,11 +82,15 @@ public class OnlineMain {
 			}else {
 				System.out.println("Given Update & Gap Days");
 			}
-
+			
+			//make online arff file
+			ExtractData.main(extratOnlineargs(dataPath,baseSet.referenceFolderPath));
+			String OnlineMetricArffPath = baseSet.referenceFolderPath+File.separator+baseSet.projectName+"-online.arff";
+			System.out.println(OnlineMetricArffPath);
 			//mk result directory
-			File PDPDir = new File(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+File.separator);
-			String directoryPath = PDPDir.getAbsolutePath();
-			PDPDir.mkdir();
+			File OnlineDir = new File(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+File.separator);
+			String directoryPath = OnlineDir.getAbsolutePath();
+			OnlineDir.mkdir();
 
 			//read BIC file and calculate Average Bug fix time
 			Reader in = new FileReader(BICpath);
@@ -104,7 +110,7 @@ public class OnlineMain {
 			ArrayList<String> attributeLineList = new ArrayList<>();
 			ArrayList<String> dataLineList = new ArrayList<>();
 
-			String content = FileUtils.readFileToString(new File(dataPath), "UTF-8");
+			String content = FileUtils.readFileToString(new File(OnlineMetricArffPath), "UTF-8");
 			String[] lines = content.split("\n");
 
 			String firstAttrCommitTime = null;
@@ -538,7 +544,17 @@ public class OnlineMain {
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+	private String[] extratOnlineargs(String arffPath, String directoryPath) {
+		
+		String[] extratPDPargs = new String[3];
+		extratPDPargs[0] = arffPath;
+		extratPDPargs[1] = directoryPath;
+		extratPDPargs[2] = "o";
+		
+		return extratPDPargs;
+	}
+	
+	
 	private void saveResult(ArrayList<RunDate> runDates, ArrayList<Integer> tr_size, ArrayList<Float> tr_bugRatio,
 			ArrayList<Integer> te_size, ArrayList<Float> te_bugRatio, String directoryPath, int run, BaseSetting baseSet2) throws Exception {
 		String resultCSVPath = directoryPath + File.separator + "Run_Information.csv";
