@@ -31,7 +31,7 @@ public class OnlineWeka {
 		
 		String projectname = null;
 		
-		String projectNamePatternStr = ".+/(\\w+)-data-online";
+		String projectNamePatternStr = ".+/(\\w+)-data";
 		Pattern projectNamePattern = Pattern.compile(projectNamePatternStr);
 		Matcher m = projectNamePattern.matcher(args[0]);
 		

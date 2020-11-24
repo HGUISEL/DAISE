@@ -490,7 +490,7 @@ public class OnlineMain {
 				if(beforeTeE != null && teE.compareTo(beforeTeE) == 0) {
 					System.out.println("Error : "+baseSet.ProjectName());
 					System.exit(0);
-				}
+				}//exception error
 
 				//check test bug ratio
 				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_isBuggy,commitTime_commitHash_experimental);
