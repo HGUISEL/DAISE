@@ -23,6 +23,7 @@ public class MetaDataInfo {
 	String NUC;
 	String developerExperience;
 	String REXP;
+	String SEXP;
 	String LT;
 	String commitTime;
 	String Key;
@@ -46,6 +47,7 @@ public class MetaDataInfo {
 		this.NUC = record.get("NUC");
 		this.developerExperience = record.get("developerExperience");
 		this.REXP = record.get("REXP");
+		this.SEXP = record.get("SEXP");
 		this.LT = record.get("LT");
 		this.commitTime = record.get("meta_data-commitTime");
 		this.Key = record.get("Key");

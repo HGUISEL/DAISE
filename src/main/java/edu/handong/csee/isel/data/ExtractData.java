@@ -33,6 +33,7 @@ public class ExtractData {
 	public static void main(String[] args) throws Exception {
 		TreeMap<String, String>  kameiAttrIndex = new TreeMap<>();
 		TreeMap<String, String>  PDPAttrIndex = new TreeMap<>();
+		TreeMap<String, String>  onlineAttriIndex = new TreeMap<>();
 		ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
 		ArrayList<String> dataLineList = new ArrayList<String>();
 		
@@ -45,7 +46,9 @@ public class ExtractData {
 			projectName = ma.group(1);
 		}
 		System.out.println(args[2]);
+		
 		initKameiMetric();
+		initOnlineMetric();
 		
 		String content = FileUtils.readFileToString(originArff, "UTF-8");
 		String[] lines = content.split("\n");
@@ -62,16 +65,20 @@ public class ExtractData {
 				if(line.startsWith("@attribute")) {
 					Matcher m = attribetePattern.matcher(line);
 					while(m.find()) {
-						System.out.println(m.group(1));
+//						System.out.println(m.group(1));
 						if(kameiAttr.contains(m.group(1))) {
 							kameiAttrIndex.put(Integer.toString(attrIndex),line);
+						}
+						if(!OnlineAttr.contains(m.group(1))) {
+							onlineAttriIndex.put(Integer.toString(attrIndex),line);
 						}
 						
 					}
 					
-					if(line.startsWith("@attribute Key ")) {
-						kameiAttrIndex.put(Integer.toString(attrIndex),line);
-					}
+//					if(line.startsWith("@attribute Key ")) {
+//						kameiAttrIndex.put(Integer.toString(attrIndex),line);
+//						onlineAttriIndex.put(Integer.toString(attrIndex),line);
+//					}
 					
 					
 					attributeLineList.add(line);
@@ -97,13 +104,14 @@ public class ExtractData {
 		if(args[2].compareTo("k") == 0)
 			ExtractKameiMetricFrom(attributeLineList, dataLineList, kameiAttrIndex);
 		else if (args[2].compareTo("p") == 0)
-			ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex);
-		
+			ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex,"p");
+		else if (args[2].compareTo("o") == 0)
+			ExtractPDPmetricFrom(attributeLineList, dataLineList, onlineAttriIndex,"o");
 
 	}
 	
 	private static void ExtractPDPmetricFrom(ArrayList<String> attributeLineList, ArrayList<String> dataLineList,
-			TreeMap<String, String> PDPAttrIndex) throws IOException {
+			TreeMap<String, String> PDPAttrIndex, String string) throws IOException {
 		
 		HashMap<String, Integer> PDPNumIndex = new HashMap<>();
 		ArrayList<String> PDPAttributeLineList = new ArrayList<>();
@@ -131,7 +139,7 @@ public class ExtractData {
 //			break;
 		}
 		
-		Save2Arff(PDPAttributeLineList, PDPData, "p");
+		Save2Arff(PDPAttributeLineList, PDPData, string);
 		
 	}
 	
@@ -223,11 +231,13 @@ public class ExtractData {
 	}
 	
 	private static void Save2Arff(ArrayList<String> attributeLineList, ArrayList<String> data, String string) throws IOException {
-		File arff;
+		File arff = null;
 		if(string.compareTo("k") == 0) {
 			arff = new File(output + File.separator + projectName + "-kamei.arff");
-		}else {
+		}else if(string.compareTo("p") == 0){
 			arff = new File(output + File.separator + projectName + "-PDP.arff");
+		}else if(string.compareTo("o") == 0) {
+			arff = new File(output + File.separator + projectName + "-online.arff");
 		}
 		
 		StringBuffer newContentBuf = new StringBuffer();
@@ -263,37 +273,48 @@ public class ExtractData {
 				"meta_data-NUC",//NUC
 				"meta_data-developerExperience",//EXP
 				"meta_data-REXP",//REXP
-				"meta_data-SEXP",//SEXP
+				"meta_data-SEXP"//SEXP
+				));
+	}
+	
+	static void initOnlineMetric() {  //not online metrics
+		OnlineAttr = new ArrayList<String>(Arrays.asList(
+				"'meta_data-Distribution modified Lines'",
+				"meta_data-SumOfDeveloper",
+				"meta_data-AGE",
+				"meta_data-numOfSubsystems",
+				"meta_data-numOfDirectories",
+				"meta_data-numOfFiles",
+				"meta_data-NUC",
+				"meta_data-developerExperience",
+				"meta_data-REXP",
+				"meta_data-SEXP",
+				"meta_data-LT",
 				"meta_data-commitTime",
 				"Key"
 				));
 	}
 	
-	static void initOnlineMetric() {
-		OnlineAttr = new ArrayList<String>(Arrays.asList(
+	static void initPDPMetric() { //not PDP metrics
+		PDPAttr = new ArrayList<String>(Arrays.asList(
 				"'meta_data-Modify Lines'",
 				"'meta_data-Add Lines'",
 				"'meta_data-Delete Lines'",
-				"meta_data-Modify_Chunk",
-				"meta_data-Add_Chunk",
-				"meta_data-Delete_Chunk",
-				"meta_data-numOfBIC",
-				"meta_data-AuthorID",
-				"meta_data-fileAge",
-				"meta_data-SumOfSourceRevision",
-				"meta_data-CommitHour",
-				"meta_data-CommitDate"
-				));
-	}
-	
-	static void initPDPMetric() {
-		PDPAttr = new ArrayList<String>(Arrays.asList(
-				"meta_data-numOfBIC",
-				"meta_data-AuthorID",
-				"meta_data-fileAge",
-				"meta_data-SumOfSourceRevision",
-				"meta_data-CommitHour",
-				"meta_data-CommitDate"
+				" meta_data-numOfModifyChunk",
+				"meta_data-numOfAddChunk",
+				"meta_data-numOfDeleteChunk",
+				"'meta_data-Distribution modified Lines'",
+				"meta_data-SumOfDeveloper",
+				"meta_data-AGE",
+				"meta_data-numOfSubsystems",
+				"meta_data-numOfDirectories",
+				"meta_data-numOfFiles",
+				"meta_data-NUC",
+				"meta_data-developerExperience",
+				"meta_data-REXP",
+				"meta_data-SEXP",
+				"meta_data-LT",
+				"meta_data-commitTime"
 				));
 	}
 }

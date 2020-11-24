@@ -35,7 +35,7 @@ public class OnlineMain {
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
-
+//상수로 패치 사이즈 수에 따라 기존의 패치 .... enum 
 	private final static String firstcommitTimePatternStr = "'(\\d\\d\\d\\d-\\d\\d-\\d\\d\\s\\d\\d:\\d\\d:\\d\\d)'";
 	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
 
@@ -205,7 +205,7 @@ public class OnlineMain {
 			int maxChange = 0;
 			baseSet.setTotalChange(commitHash_data.size());
 			if(baseSet.TotalChange() < 2000) {
-				System.out.println("The num of total change is less than 5000.\nBye!");
+				System.out.println("The num of total change is less than 2000.\nTotal Change : "+commitHash_data.size()+"\nBye!");
 				System.exit(0);
 			}else if(baseSet.TotalChange() >= 2000 && baseSet.TotalChange() < 5000) {
 				maxChange = 2000;
