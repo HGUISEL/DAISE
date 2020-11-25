@@ -76,7 +76,7 @@ public class OnlineWeka {
 //				testData.setClassIndex(testData.numAttributes() - 1);
 				System.out.println(testData.classAttribute());
 				
-				ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive","ibk","j48","bayesNet","logi"));
+				ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive","ibk"));
 						
 				for(String algorithm : algorithms) {
 					Classifier classifyModel = null;
