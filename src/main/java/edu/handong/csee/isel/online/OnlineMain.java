@@ -583,6 +583,8 @@ public class OnlineMain {
 		bufferedWriter.write("\n");
 		bufferedWriter.write("totalBuggyRatio% : "+baseSet.TotalBuggyRatio()*100);
 		bufferedWriter.write("\n");
+		bufferedWriter.write("Average Bug Fixing Time (Day): "+baseSet.averageBugFixingTimeDays);
+		bufferedWriter.write("\n");
 		bufferedWriter.write("gapDays (Month) : "+baseSet.GapDays());
 		bufferedWriter.write("\n");
 		bufferedWriter.write("updateDays (Day) : "+baseSet.UpdateDays());
