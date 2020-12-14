@@ -93,6 +93,8 @@ public class OnlineMain {
 			OnlineDir.mkdir();
 
 			//read BIC file and calculate Average Bug fix time
+			TreeMap<String,String> key_fixTime = new TreeMap<>();
+			
 			Reader in = new FileReader(BICpath);
 			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
 			int numOfBIC = 0;
@@ -102,6 +104,13 @@ public class OnlineMain {
 				String BFCtime = record.get("FixDate");
 				calDateDays = calDateDays + calDateBetweenAandB(BICtime,BFCtime);
 				numOfBIC++;
+				
+				//save Bug Fixing Time
+				String BICcommit = record.get("BISha1");
+				String BICsourcePath = record.get("oldPath").replace("/", "-");
+				String key = BICcommit+"-"+BICsourcePath;
+				String FixTime = record.get("FixDate");
+				key_fixTime.put(key, FixTime);
 			}
 			baseSet.setAverageBugFixingTimeDays(calDateDays/numOfBIC);
 			baseSet.setEndGapDays(baseSet.AverageBugFixingTimeDays()); //set end gap
@@ -157,11 +166,14 @@ public class OnlineMain {
 			}
 			TreeMap<String,TreeSet<String>> commitTime_commitHash = new TreeMap<>();
 			HashMap<String,ArrayList<String>> commitHash_data = new HashMap<>();
-			HashMap<String,ArrayList<Boolean>> commitHash_isBuggy = new HashMap<>();
+//			HashMap<String,ArrayList<Boolean>> commitHash_isBuggy = new HashMap<>();
+			HashMap<String,HashMap<String,Boolean>> commitHash_key_isBuggy = new HashMap<>();
+//			HashMap<String,String> key_commitTime = new HashMap<>();
 
 			for(String line : dataLineList) {
 				String commitTime = parsingCommitTime(line,firstAttrCommitTime,indexOfCommitTime);
-				String commitHash = parsingCommitHash(line,firstAttrKey,indexOfKey);
+				String key = parsingKey(line,firstAttrKey,indexOfKey);
+				String commitHash = key.substring(0,key.indexOf("-"));
 				String aData = parsingDataLine(line,indexOfCommitTime,indexOfKey);
 				boolean isBuggy  = parsingBugCleanLabel(line,firstAttrLabel,defaultLabel);
 
@@ -187,17 +199,25 @@ public class OnlineMain {
 					data.add(aData);
 					commitHash_data.put(commitHash, data);
 				}
-
-				//put2commitHash_isBuggy
-				ArrayList<Boolean> buggys;
-				if(commitHash_isBuggy.containsKey(commitHash)) {
-					buggys = commitHash_isBuggy.get(commitHash);
-					buggys.add(isBuggy);
+				
+				//put2commitHash_key_isBuggy
+				HashMap<String,Boolean> key_isBuggy;
+				if(commitHash_key_isBuggy.containsKey(commitHash)){
+					key_isBuggy = commitHash_key_isBuggy.get(commitHash);
+					key_isBuggy.put(key, isBuggy);
 				}else {
-					buggys = new ArrayList<>();
-					buggys.add(isBuggy);
-					commitHash_isBuggy.put(commitHash, buggys);
+					key_isBuggy = new HashMap<>();
+					key_isBuggy.put(key, isBuggy);
+					commitHash_key_isBuggy.put(commitHash, key_isBuggy);
 				}
+				
+//				//put2key_commitTime
+//				if(key_commitTime.containsKey(key)) {
+//					System.out.println("There is dup Key!!!!");
+//					System.out.println(key);
+//				}else {
+//					key_commitTime.put(key,commitTime);
+//				}
 			}
 
 			//set total first, last commit time
@@ -283,7 +303,7 @@ public class OnlineMain {
 			System.out.println();
 			//			System.exit(0);
 			//set total buggy rate
-			float totalBugRatio = calBuggyRatio(baseSet.StartDate(),baseSet.EndDate(),commitHash_isBuggy,commitTime_commitHash_experimental);
+			float totalBugRatio = calBuggyRatio(baseSet.StartDate(),baseSet.EndDate(),commitHash_key_isBuggy,commitTime_commitHash_experimental);
 			baseSet.setTotalBuggyRatio(totalBugRatio);
 			System.out.println("Total Bug Ratio : " + totalBugRatio*100 +"%");
 
@@ -293,7 +313,7 @@ public class OnlineMain {
 
 			for(int i = 1000; ; i += 100) {
 				ArrayList<String> endDate_numOfCommit = calEndDateNumOfCommit(baseSet.StartDate(),i,commitTime_commitHash_experimental);
-				float bugRatio = calBuggyRatio(baseSet.StartDate(),endDate_numOfCommit.get(0),commitHash_isBuggy,commitTime_commitHash_experimental);
+				float bugRatio = calBuggyRatio(baseSet.StartDate(),endDate_numOfCommit.get(0),commitHash_key_isBuggy,commitTime_commitHash_experimental);
 				endDate_numOfCommit.add(2,Integer.toString(i));
 				//endDate_numOfCommit : index 0 : endDate / index 1 : real number of Commit / index 2 : input number of Commit
 				tr_bugRatio_endDate_numOfCommit.put(bugRatio,endDate_numOfCommit);
@@ -346,7 +366,7 @@ public class OnlineMain {
 
 						while(true) {
 							String toDate = addDate(fromDate,updateDays);
-							float bugRatio = calBuggyRatio(fromDate,toDate,commitHash_isBuggy,commitTime_commitHash_experimental);
+							float bugRatio = calBuggyRatio(fromDate,toDate,commitHash_key_isBuggy,commitTime_commitHash_experimental);
 							//							System.out.println(bugRatio);
 
 							if((bugRatio != 200) && (bugRatio != 0)) {
@@ -467,7 +487,7 @@ public class OnlineMain {
 				//				System.out.println("T2 : "+T2);
 
 				//check TR bugRatio
-				float bugRatio = calBuggyRatio(trS,trE_gapS,commitHash_isBuggy,commitTime_commitHash_experimental);
+				float bugRatio = calBuggyRatio(trS,trE_gapS,commitHash_key_isBuggy,commitTime_commitHash_experimental);
 
 				if((bugRatio == 200) || (bugRatio == 0)) {
 					trS = addDate(trS,baseSet.UpdateDays());
@@ -493,7 +513,7 @@ public class OnlineMain {
 				}//exception error
 
 				//check test bug ratio
-				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_isBuggy,commitTime_commitHash_experimental);
+				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_key_isBuggy,commitTime_commitHash_experimental);
 
 				if((bugRatio == 200) || (bugRatio == 0)) {
 					trS = addDate(trS,baseSet.UpdateDays());
@@ -654,7 +674,7 @@ public class OnlineMain {
 	}
 
 	private float calBuggyRatio(String startGapStr, String endGapStr,
-			HashMap<String, ArrayList<Boolean>> commitHash_isBuggy, TreeMap<String, TreeSet<String>> commitTime_commitHash_experimental) {
+			HashMap<String, HashMap<String, Boolean>> commitHash_key_isBuggy, TreeMap<String, TreeSet<String>> commitTime_commitHash_experimental) {
 		int buggyKey = 0;
 		int totalKey = 0;
 
@@ -663,11 +683,12 @@ public class OnlineMain {
 				continue;
 			TreeSet<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
 			for(String commitHash : commitHashs) {
-				ArrayList<Boolean> isBuggys = commitHash_isBuggy.get(commitHash);
-				totalKey += isBuggys.size();
-				for(boolean isBuggy : isBuggys) {
-					if(isBuggy == true) buggyKey++;
+				HashMap<String,Boolean> key_isBuggys = commitHash_key_isBuggy.get(commitHash);
+				for(String aKey : key_isBuggys.keySet()) {
+					boolean isbuggy = key_isBuggys.get(aKey);
+					if(isbuggy == true) buggyKey++;
 				}
+				totalKey += key_isBuggys.size();
 			}
 		}
 
@@ -715,7 +736,7 @@ public class OnlineMain {
 	}
 
 
-	private String parsingCommitHash(String line, String firstKey, int indexOfKey) {
+	private String parsingKey(String line, String firstKey, int indexOfKey) {
 		String key = null;
 		if((line.contains(","+indexOfKey+" "))) {
 			key = line.substring(line.lastIndexOf(Integer.toString(indexOfKey)),line.lastIndexOf("}"));
@@ -724,7 +745,7 @@ public class OnlineMain {
 			key = firstKey;
 		}
 
-		return key.substring(0,key.indexOf("-"));
+		return key;
 	}
 
 	private String parsingDataLine(String line, int indexOfCommitTime,int indexOfKey) {
