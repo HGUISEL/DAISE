@@ -165,7 +165,8 @@ public class OnlineMain {
 				System.exit(0);
 			}
 			TreeMap<String,TreeSet<String>> commitTime_commitHash = new TreeMap<>();
-			HashMap<String,ArrayList<String>> commitHash_data = new HashMap<>();
+//			HashMap<String,ArrayList<String>> commitHash_data = new HashMap<>();
+			HashMap<String,HashMap<String,String>> commitHash_key_data = new HashMap<>();
 //			HashMap<String,ArrayList<Boolean>> commitHash_isBuggy = new HashMap<>();
 			HashMap<String,HashMap<String,Boolean>> commitHash_key_isBuggy = new HashMap<>();
 //			HashMap<String,String> key_commitTime = new HashMap<>();
@@ -190,14 +191,14 @@ public class OnlineMain {
 				}
 
 				//put2commitHash_data
-				ArrayList<String> data;
-				if(commitHash_data.containsKey(commitHash)) {
-					data = commitHash_data.get(commitHash);
-					data.add(aData);
+				HashMap<String,String> key_data;
+				if(commitHash_key_data.containsKey(commitHash)) {
+					key_data = commitHash_key_data.get(commitHash);
+					key_data.put(key, aData);
 				}else {
-					data = new ArrayList<>();
-					data.add(aData);
-					commitHash_data.put(commitHash, data);
+					key_data = new HashMap<>();
+					key_data.put(key, aData);
+					commitHash_key_data.put(commitHash, key_data);
 				}
 				
 				//put2commitHash_key_isBuggy
@@ -229,9 +230,9 @@ public class OnlineMain {
 
 			//total change
 			int maxChange = 0;
-			baseSet.setTotalChange(commitHash_data.size());
+			baseSet.setTotalChange(commitHash_key_data.size());
 			if(baseSet.TotalChange() < 2000) {
-				System.out.println("The num of total change is less than 2000.\nTotal Change : "+commitHash_data.size()+"\nBye!");
+				System.out.println("The num of total change is less than 2000.\nTotal Change : "+commitHash_key_data.size()+"\nBye!");
 				System.exit(0);
 			}else if(baseSet.TotalChange() >= 2000 && baseSet.TotalChange() < 5000) {
 				maxChange = 2000;
@@ -286,7 +287,7 @@ public class OnlineMain {
 				for(String commitTime : commitTime_commitHash.keySet()) {
 					if(!(baseSet.StartDate().compareTo(commitTime)<=0 && commitTime.compareTo(baseSet.EndDate())<=0))
 						continue;
-					//TODO 전체 커밋 해쉬가 10000개 안되는 경우에는...? - 일단은 첫번째 설정으로 돌도록 함 
+					
 					TreeSet<String> commitHash = commitTime_commitHash.get(commitTime);
 					baseSet.setTotalExperimentalCommit(commitHash.size());
 					commitTime_commitHash_experimental.put(commitTime, commitHash);
@@ -328,7 +329,7 @@ public class OnlineMain {
 			int default_Tr_numOfCommit = Integer.parseInt(endDate_numOfCommit.get(2));
 			baseSet.setDefault_Tr_size(default_Tr_numOfCommit);
 
-			System.out.println("TrainingSet Bug Ratio : " + tra_bugRatio*100 +"%");
+			System.out.println("TrainingSet Bug Ratio(Total Range) : " + tra_bugRatio*100 +"%");
 			System.out.println("TrainingSet EndDate : " + tr_endDate);
 			System.out.println("TrainingSet numOfCommit : " + tr_numOfCommit);
 			System.out.println("TrainingSet default NumOfCommit : " + default_Tr_numOfCommit);
@@ -453,19 +454,21 @@ public class OnlineMain {
 			
 			String beforeTeE = null;
 
+			//print variable
 			ArrayList<Integer> tr_size = new ArrayList<>();
 			ArrayList<Integer> te_size = new ArrayList<>();
-
 			ArrayList<Float> tr_bugRatio = new ArrayList<>();
+			ArrayList<Float> tr_run_bugRatio = new ArrayList<>();
 			ArrayList<Float> te_bugRatio = new ArrayList<>();
-
 			ArrayList<RunDate> runDates = new ArrayList<>();
+			
 
 			while(!(teE != null) || !(baseSet.EndDate().compareTo(teE) <= 0)) { //end data가 teE보다 작지 않으면  
 
 				//				System.out.println("T1 : "+T1);
 				//cal training set end date (T2)
 				TreeSet<String> tr_commitHash = new TreeSet<String>();
+				
 				int count = 0;
 				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 					if(!(trS.compareTo(commitTime)<=0))
@@ -486,22 +489,13 @@ public class OnlineMain {
 				}
 				//				System.out.println("T2 : "+T2);
 
-				//check TR bugRatio
-				float bugRatio = calBuggyRatio(trS,trE_gapS,commitHash_key_isBuggy,commitTime_commitHash_experimental);
-
-				if((bugRatio == 200) || (bugRatio == 0)) {
-					trS = addDate(trS,baseSet.UpdateDays());
-					trS = findNearDate(trS,commitTime_commitHash,"l");
-					continue;
-				}
-				tr_bugRatio.add(bugRatio);
 
 				//jump gap month
 				gapE_teS = addMonth(trE_gapS,baseSet.GapDays());
 
 				//				System.out.println("T3 : "+T3);
 
-				//cal test
+				//cal the data of test end
 				TreeSet<String> te_commitHash = new TreeSet<String>();
 
 				teE = addDate(gapE_teS,baseSet.UpdateDays());
@@ -510,8 +504,86 @@ public class OnlineMain {
 				if(beforeTeE != null && teE.compareTo(beforeTeE) == 0) {
 					System.out.println("Error : "+baseSet.ProjectName());
 					System.exit(0);
-				}//exception error
+				}//date isn't update error
+				
+				
+				//START : check TR bugRatio & Change bug label to clean before Bug Fixing Time 
+				//use : commitHash_data (), key_fixTime, last test data time(teE)
+				//new : bugRatio, tr_commitHash_data
+				//calBuggyRatio(trS,trE_gapS,commitHash_isBuggy,commitTime_commitHash_experimental);
+				float bugRatio = 0;
+				float run_bugRatio = 0;
+				int buggyKey = 0;
+				int run_buggyKey = 0;
+				int totalKey = 0;
+				ArrayList<String> tr_data = new ArrayList<>();
+				
+				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
+					if(!(trS.compareTo(commitTime)<=0 && commitTime.compareTo(trE_gapS)<=0))
+						continue;
+					TreeSet<String> commitHashs = commitTime_commitHash_experimental.get(commitTime);
+					for(String commitHash : commitHashs) {
+						HashMap<String,Boolean> key_isBuggys = commitHash_key_isBuggy.get(commitHash);
+						HashMap<String,String> key_data = commitHash_key_data.get(commitHash);
+						
+						for(String aKey : key_isBuggys.keySet()) {
+							boolean isbuggy = key_isBuggys.get(aKey);
+							String fixTime = key_fixTime.get(aKey);
+							String data = key_data.get(aKey);
+							
+							if(isbuggy == true) {
+								if(teE.compareTo(fixTime)<=0) { // fixTime > teE // run의 기간 보다 후에 결함이 수정될경우 label = clean
+									
+									//make data to clean 
+									if(defaultLabel.compareTo("buggy") == 0){
+										if(data.startsWith("{0 buggy,")) {
+											data = "{"+data.substring(data.indexOf(",")+1, data.length());
+										}else {
+											System.out.println("큰일!!!");
+										}
+									}else if(defaultLabel.compareTo("clean") == 0) {
+										if(!data.startsWith("{0 clean,")) {
+											data = data.substring(data.indexOf("{")+1, data.length());
+											data = "{0 clean," + data;
+//											System.out.println(data);
+										}else {
+											System.out.println("큰일!!!");
+										}
+									}
+									run_buggyKey++;//run time 내의 tr bug label
+								}
+								buggyKey++; //전체 기간의 tr bug label 
+							}
+							//save data to tr_commmit_
+							tr_data.add(data);
+						}
+						totalKey += key_isBuggys.size();
+					}
+				}
+				
+				if(totalKey != 0) {
+					bugRatio = (float)buggyKey / (float)totalKey;
+					run_bugRatio = (float)(buggyKey - run_buggyKey) / (float)totalKey;
+				}else {
+					bugRatio = 200;
+					run_bugRatio = 200;
+				}
 
+				//check tr bug ratio 
+				if((run_bugRatio == 200) || (run_bugRatio == 0)) {
+					trS = addDate(trS,baseSet.UpdateDays());
+					trS = findNearDate(trS,commitTime_commitHash,"l");
+					continue;
+				}
+				System.out.println("totalKey : "+totalKey);
+				System.out.println("buggyKey : "+buggyKey);
+				System.out.println("run_buggyKey : "+(buggyKey - run_buggyKey));
+				tr_bugRatio.add(bugRatio);
+				tr_run_bugRatio.add(run_bugRatio);
+				
+				//END : check TR bugRatio & Change bug label to clean before Bug Fixing Time 
+				
+				
 				//check test bug ratio
 				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_key_isBuggy,commitTime_commitHash_experimental);
 
@@ -523,7 +595,7 @@ public class OnlineMain {
 				te_bugRatio.add(bugRatio);
 
 				//save tr data to arff
-				save2Arff(run,tr_commitHash,commitHash_data,attributeLineList,directoryPath,"tr");
+				save2Arff(run,tr_commitHash,tr_data,attributeLineList,directoryPath,"tr");
 
 				//
 				count = 0;
@@ -537,7 +609,7 @@ public class OnlineMain {
 				te_size.add(count);
 
 				//save tr data to arff
-				save2Arff(run,te_commitHash,commitHash_data,attributeLineList,directoryPath,"te");
+				save2Arff(run,te_commitHash,commitHash_key_data,attributeLineList,directoryPath,"te");/////////////////////////////////////////////////////
 
 				//save information Ts
 				RunDate runDate = new RunDate();
@@ -555,7 +627,7 @@ public class OnlineMain {
 			}
 
 			//print result
-			saveResult(runDates,tr_size,tr_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
+			saveResult(runDates,tr_size,tr_bugRatio,tr_run_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
 
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -563,7 +635,8 @@ public class OnlineMain {
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////METHOD/////////////////////////////////////////////////////////////////////////////////////////////
+
 	private String[] extratOnlineargs(String arffPath, String directoryPath) {
 		
 		String[] extratPDPargs = new String[3];
@@ -576,13 +649,13 @@ public class OnlineMain {
 	
 	
 	private void saveResult(ArrayList<RunDate> runDates, ArrayList<Integer> tr_size, ArrayList<Float> tr_bugRatio,
-			ArrayList<Integer> te_size, ArrayList<Float> te_bugRatio, String directoryPath, int run, BaseSetting baseSet2) throws Exception {
+			ArrayList<Float> tr_run_bugRatio, ArrayList<Integer> te_size, ArrayList<Float> te_bugRatio, String directoryPath, int run, BaseSetting baseSet2) throws Exception {
 		String resultCSVPath = directoryPath + File.separator + "Run_Information.csv";
 		BufferedWriter writer = new BufferedWriter(new FileWriter(resultCSVPath));
-		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("TrSt","TrEn_GapSt","TrCommit","TrBug%","GapEn_TeSt","TeEn","TeCommit","TeBug%"));
+		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("TrSt","TrEn_GapSt","TrCommit","TrRunBug%","TrBug%","GapEn_TeSt","TeEn","TeCommit","TeBug%"));
 		for(int i = 0; i < run; i++) {
 			RunDate runDate = runDates.get(i);
-			csvPrinter.printRecord(runDate.getTrS(),runDate.getTrE_gapS(),tr_size.get(i),tr_bugRatio.get(i)*100,runDate.getGapE_teS(),runDate.getTeE(),te_size.get(i),te_bugRatio.get(i)*100);
+			csvPrinter.printRecord(runDate.getTrS(),runDate.getTrE_gapS(),tr_size.get(i),tr_run_bugRatio.get(i)*100,tr_bugRatio.get(i)*100,runDate.getGapE_teS(),runDate.getTeE(),te_size.get(i),te_bugRatio.get(i)*100);
 		}
 		csvPrinter.close();
 		writer.close();
@@ -612,8 +685,8 @@ public class OnlineMain {
 		bufferedWriter.close();
 
 	}
-
-	private void save2Arff(int run, TreeSet<String> tr_commitHash, HashMap<String, ArrayList<String>> commitHash_data,
+	
+	private void save2Arff(int run, TreeSet<String> tr_commitHash, ArrayList<String> commitHash_key_data,
 			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
 		File newDeveloperArff = new File(directoryPath +File.separator+run+"_"+string+".arff");
 		StringBuffer newContentBuf = new StringBuffer();
@@ -625,9 +698,31 @@ public class OnlineMain {
 			newContentBuf.append(line + "\n");
 		}
 
-		for(String commitHash : commitHash_data.keySet()) {
+		for(String data : commitHash_key_data) {
+			newContentBuf.append(data + "\n");
+		}
+
+		FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+		
+	}
+
+	private void save2Arff(int run, TreeSet<String> tr_commitHash, HashMap<String, HashMap<String, String>> commitHash_key_data,
+			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
+		File newDeveloperArff = new File(directoryPath +File.separator+run+"_"+string+".arff");
+		StringBuffer newContentBuf = new StringBuffer();
+
+		//write attribute
+		for (String line : attributeLineList) {
+			if(line.startsWith("@attribute meta_data-commitTime")) continue;
+			if(line.startsWith("@attribute Key {")) continue;
+			newContentBuf.append(line + "\n");
+		}
+
+		for(String commitHash : commitHash_key_data.keySet()) {
 			if(tr_commitHash.contains(commitHash)) {
-				for(String data : commitHash_data.get(commitHash)) {
+				HashMap<String,String> key_data = commitHash_key_data.get(commitHash);
+				for(String key : key_data.keySet()) {
+					String data = key_data.get(key);
 					newContentBuf.append(data + "\n");
 				}
 			}
