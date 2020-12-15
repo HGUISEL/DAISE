@@ -93,7 +93,7 @@ public class OnlineMain {
 			OnlineDir.mkdir();
 
 			//read BIC file and calculate Average Bug fix time
-			TreeMap<String,String> key_fixTime = new TreeMap<>();
+			HashMap<String,TreeSet<String>> key_fixTimes = new HashMap<>();
 			
 			Reader in = new FileReader(BICpath);
 			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
@@ -110,8 +110,27 @@ public class OnlineMain {
 				String BICsourcePath = record.get("oldPath").replace("/", "-");
 				String key = BICcommit+"-"+BICsourcePath;
 				String FixTime = record.get("FixDate");
-				key_fixTime.put(key, FixTime);
+				
+				TreeSet<String> fixTimes;
+				if(key_fixTimes.containsKey(key)) {
+					fixTimes = key_fixTimes.get(key);
+					fixTimes.add(FixTime);
+				}else {
+					fixTimes = new TreeSet<>();
+					fixTimes.add(FixTime);
+					key_fixTimes.put(key, fixTimes);
+				}
 			}
+			
+			//find fastest bug fixTime
+			TreeMap<String,String> key_fixTime = new TreeMap<>();
+			
+			for(String key : key_fixTimes.keySet()) {
+				TreeSet<String> fixTimes = key_fixTimes.get(key);
+				key_fixTime.put(key, fixTimes.first());
+			}
+			
+			//set average bug fix time (day)
 			baseSet.setAverageBugFixingTimeDays(calDateDays/numOfBIC);
 			baseSet.setEndGapDays(baseSet.AverageBugFixingTimeDays()); //set end gap
 
