@@ -4,7 +4,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.Reader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -37,7 +36,7 @@ public class OnlineMain {
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
-//상수로 패치 사이즈 수에 따라 기존의 패치 .... enum 
+	//상수로 패치 사이즈 수에 따라 기존의 패치 .... enum 
 	private final static String firstcommitTimePatternStr = "'(\\d\\d\\d\\d-\\d\\d-\\d\\d\\s\\d\\d:\\d\\d:\\d\\d)'";
 	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
 
@@ -82,11 +81,12 @@ public class OnlineMain {
 			}else {
 				System.out.println("Given Update & Gap Days");
 			}
-			
+
 			//make online arff file
 			ExtractData.main(extratOnlineargs(dataPath,baseSet.referenceFolderPath));
 			String OnlineMetricArffPath = baseSet.referenceFolderPath+File.separator+baseSet.projectName+"-online.arff";
 			System.out.println(OnlineMetricArffPath);
+			
 			//mk result directory
 			File OnlineDir = new File(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+File.separator);
 			String directoryPath = OnlineDir.getAbsolutePath();
@@ -94,7 +94,7 @@ public class OnlineMain {
 
 			//read BIC file and calculate Average Bug fix time
 			HashMap<String,TreeSet<String>> key_fixTimes = new HashMap<>();
-			
+
 			Reader in = new FileReader(BICpath);
 			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
 			int numOfBIC = 0;
@@ -104,13 +104,13 @@ public class OnlineMain {
 				String BFCtime = record.get("FixDate");
 				calDateDays = calDateDays + calDateBetweenAandB(BICtime,BFCtime);
 				numOfBIC++;
-				
+
 				//save Bug Fixing Time
 				String BICcommit = record.get("BISha1");
 				String BICsourcePath = record.get("oldPath").replace("/", "-");
 				String key = BICcommit+"-"+BICsourcePath;
 				String FixTime = record.get("FixDate");
-				
+
 				TreeSet<String> fixTimes;
 				if(key_fixTimes.containsKey(key)) {
 					fixTimes = key_fixTimes.get(key);
@@ -121,15 +121,15 @@ public class OnlineMain {
 					key_fixTimes.put(key, fixTimes);
 				}
 			}
-			
+
 			//find fastest bug fixTime
 			TreeMap<String,String> key_fixTime = new TreeMap<>();
-			
+
 			for(String key : key_fixTimes.keySet()) {
 				TreeSet<String> fixTimes = key_fixTimes.get(key);
 				key_fixTime.put(key, fixTimes.first());
 			}
-			
+
 			//set average bug fix time (day)
 			baseSet.setAverageBugFixingTimeDays(calDateDays/numOfBIC);
 			baseSet.setEndGapDays(baseSet.AverageBugFixingTimeDays()); //set end gap
@@ -184,11 +184,8 @@ public class OnlineMain {
 				System.exit(0);
 			}
 			TreeMap<String,TreeSet<String>> commitTime_commitHash = new TreeMap<>();
-//			HashMap<String,ArrayList<String>> commitHash_data = new HashMap<>();
 			HashMap<String,HashMap<String,String>> commitHash_key_data = new HashMap<>();
-//			HashMap<String,ArrayList<Boolean>> commitHash_isBuggy = new HashMap<>();
 			HashMap<String,HashMap<String,Boolean>> commitHash_key_isBuggy = new HashMap<>();
-//			HashMap<String,String> key_commitTime = new HashMap<>();
 
 			for(String line : dataLineList) {
 				String commitTime = parsingCommitTime(line,firstAttrCommitTime,indexOfCommitTime);
@@ -201,7 +198,6 @@ public class OnlineMain {
 				TreeSet<String> commitHashs;
 				if(commitTime_commitHash.containsKey(commitTime)) {
 					commitHashs = commitTime_commitHash.get(commitTime);
-					//					if(commitHashs.contains(commitHash)) System.out.println("222");
 					commitHashs.add(commitHash);
 				}else {
 					commitHashs = new TreeSet<>();
@@ -219,7 +215,7 @@ public class OnlineMain {
 					key_data.put(key, aData);
 					commitHash_key_data.put(commitHash, key_data);
 				}
-				
+
 				//put2commitHash_key_isBuggy
 				HashMap<String,Boolean> key_isBuggy;
 				if(commitHash_key_isBuggy.containsKey(commitHash)){
@@ -230,14 +226,6 @@ public class OnlineMain {
 					key_isBuggy.put(key, isBuggy);
 					commitHash_key_isBuggy.put(commitHash, key_isBuggy);
 				}
-				
-//				//put2key_commitTime
-//				if(key_commitTime.containsKey(key)) {
-//					System.out.println("There is dup Key!!!!");
-//					System.out.println(key);
-//				}else {
-//					key_commitTime.put(key,commitTime);
-//				}
 			}
 
 			//set total first, last commit time
@@ -275,7 +263,6 @@ public class OnlineMain {
 
 					//set endGapDate str
 					String endGapDate = addDate(baseSet.LastCommitTimeStr(),-baseSet.EndGapDays());
-					//조건문 추가, 만약 last commit time str에서 average bug fixing time을 뺀 값이 음수일 경우? - 개발 전체 기간이 평균fixing time보다 작아야 일어나는 현상이라 상관 안해도 될듯 
 					//조건문 추가, 만약 start date가 end date보다 클 경우 start date를 낮춘다 3year -> 2year
 					baseSet.setEndDate(findNearDate(endGapDate,commitTime_commitHash,"l"));
 
@@ -306,7 +293,7 @@ public class OnlineMain {
 				for(String commitTime : commitTime_commitHash.keySet()) {
 					if(!(baseSet.StartDate().compareTo(commitTime)<=0 && commitTime.compareTo(baseSet.EndDate())<=0))
 						continue;
-					
+
 					TreeSet<String> commitHash = commitTime_commitHash.get(commitTime);
 					baseSet.setTotalExperimentalCommit(commitHash.size());
 					commitTime_commitHash_experimental.put(commitTime, commitHash);
@@ -321,7 +308,7 @@ public class OnlineMain {
 			System.out.println("real str date : "+baseSet.StartDate());
 			System.out.println("real end date : "+baseSet.EndDate());
 			System.out.println();
-			//			System.exit(0);
+			
 			//set total buggy rate
 			float totalBugRatio = calBuggyRatio(baseSet.StartDate(),baseSet.EndDate(),commitHash_key_isBuggy,commitTime_commitHash_experimental);
 			baseSet.setTotalBuggyRatio(totalBugRatio);
@@ -442,7 +429,6 @@ public class OnlineMain {
 
 				if((baseSet.GapDays() > 0) || gapDays > 5)
 					break;
-				//				break;
 			}
 
 			if((baseSet.UpdateDays() == 0) && (baseSet.GapDays() == 0)) {
@@ -470,7 +456,7 @@ public class OnlineMain {
 			String trE_gapS = null;//gap start
 			String gapE_teS = null;//test start
 			String teE = null;//test end
-			
+
 			String beforeTeE = null;
 
 			//print variable
@@ -480,14 +466,14 @@ public class OnlineMain {
 			ArrayList<Float> tr_run_bugRatio = new ArrayList<>();
 			ArrayList<Float> te_bugRatio = new ArrayList<>();
 			ArrayList<RunDate> runDates = new ArrayList<>();
-			
+
 
 			while(!(teE != null) || !(baseSet.EndDate().compareTo(teE) <= 0)) { //end data가 teE보다 작지 않으면  
 
-				//				System.out.println("T1 : "+T1);
+				//System.out.println("T1 : "+T1);
 				//cal training set end date (T2)
 				TreeSet<String> tr_commitHash = new TreeSet<String>();
-				
+
 				int count = 0;
 				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 					if(!(trS.compareTo(commitTime)<=0))
@@ -519,24 +505,24 @@ public class OnlineMain {
 
 				teE = addDate(gapE_teS,baseSet.UpdateDays());
 				System.out.println("T4 : "+teE);
-				
+
 				if(beforeTeE != null && teE.compareTo(beforeTeE) == 0) {
 					System.out.println("Error : "+baseSet.ProjectName());
 					System.exit(0);
 				}//date isn't update error
-				
-				
+
+
 				//START : check TR bugRatio & Change bug label to clean before Bug Fixing Time 
 				//use : commitHash_data (), key_fixTime, last test data time(teE)
 				//new : bugRatio, tr_commitHash_data
-				//calBuggyRatio(trS,trE_gapS,commitHash_isBuggy,commitTime_commitHash_experimental);
+
 				float bugRatio = 0;
 				float run_bugRatio = 0;
 				int buggyKey = 0;
 				int run_buggyKey = 0;
 				int totalKey = 0;
 				ArrayList<String> tr_data = new ArrayList<>();
-				
+
 				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 					if(!(trS.compareTo(commitTime)<=0 && commitTime.compareTo(trE_gapS)<=0))
 						continue;
@@ -544,15 +530,15 @@ public class OnlineMain {
 					for(String commitHash : commitHashs) {
 						HashMap<String,Boolean> key_isBuggys = commitHash_key_isBuggy.get(commitHash);
 						HashMap<String,String> key_data = commitHash_key_data.get(commitHash);
-						
+
 						for(String aKey : key_isBuggys.keySet()) {
 							boolean isbuggy = key_isBuggys.get(aKey);
 							String fixTime = key_fixTime.get(aKey);
 							String data = key_data.get(aKey);
-							
+
 							if(isbuggy == true) {
 								if(teE.compareTo(fixTime)<=0) { // fixTime > teE // run의 기간 보다 후에 결함이 수정될경우 label = clean
-									
+
 									//make data to clean 
 									if(defaultLabel.compareTo("buggy") == 0){
 										if(data.startsWith("{0 buggy,")) {
@@ -564,7 +550,6 @@ public class OnlineMain {
 										if(!data.startsWith("{0 clean,")) {
 											data = data.substring(data.indexOf("{")+1, data.length());
 											data = "{0 clean," + data;
-//											System.out.println(data);
 										}else {
 											System.out.println("큰일!!!");
 										}
@@ -579,7 +564,7 @@ public class OnlineMain {
 						totalKey += key_isBuggys.size();
 					}
 				}
-				
+
 				if(totalKey != 0) {
 					bugRatio = (float)buggyKey / (float)totalKey;
 					run_bugRatio = (float)(buggyKey - run_buggyKey) / (float)totalKey;
@@ -599,10 +584,10 @@ public class OnlineMain {
 				System.out.println("run_buggyKey : "+(buggyKey - run_buggyKey));
 				tr_bugRatio.add(bugRatio);
 				tr_run_bugRatio.add(run_bugRatio);
-				
+
 				//END : check TR bugRatio & Change bug label to clean before Bug Fixing Time 
-				
-				
+
+
 				//check test bug ratio
 				bugRatio = calBuggyRatio(gapE_teS,teE,commitHash_key_isBuggy,commitTime_commitHash_experimental);
 
@@ -616,7 +601,6 @@ public class OnlineMain {
 				//save tr data to arff
 				save2Arff(run,tr_commitHash,tr_data,attributeLineList,directoryPath,"tr");
 
-				//
 				count = 0;
 				for(String commitTime : commitTime_commitHash_experimental.keySet()) {
 					if(!(gapE_teS.compareTo(commitTime)<=0 && commitTime.compareTo(teE)<0))
@@ -657,16 +641,16 @@ public class OnlineMain {
 	//////////////////////////////////////////////////////METHOD/////////////////////////////////////////////////////////////////////////////////////////////
 
 	private String[] extratOnlineargs(String arffPath, String directoryPath) {
-		
+
 		String[] extratPDPargs = new String[3];
 		extratPDPargs[0] = arffPath;
 		extratPDPargs[1] = directoryPath;
 		extratPDPargs[2] = "o";
-		
+
 		return extratPDPargs;
 	}
-	
-	
+
+
 	private void saveResult(ArrayList<RunDate> runDates, ArrayList<Integer> tr_size, ArrayList<Float> tr_bugRatio,
 			ArrayList<Float> tr_run_bugRatio, ArrayList<Integer> te_size, ArrayList<Float> te_bugRatio, String directoryPath, int run, BaseSetting baseSet2) throws Exception {
 		String resultCSVPath = directoryPath + File.separator + "Run_Information.csv";
@@ -704,7 +688,7 @@ public class OnlineMain {
 		bufferedWriter.close();
 
 	}
-	
+
 	private void save2Arff(int run, TreeSet<String> tr_commitHash, ArrayList<String> commitHash_key_data,
 			ArrayList<String> attributeLineList, String directoryPath, String string) throws Exception {
 		File newDeveloperArff = new File(directoryPath +File.separator+run+"_"+string+".arff");
@@ -722,7 +706,7 @@ public class OnlineMain {
 		}
 
 		FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
-		
+
 	}
 
 	private void save2Arff(int run, TreeSet<String> tr_commitHash, HashMap<String, HashMap<String, String>> commitHash_key_data,
