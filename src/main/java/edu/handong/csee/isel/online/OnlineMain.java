@@ -46,6 +46,8 @@ public class OnlineMain {
 	private final static String defaultLabelPatternStr = "@attribute @@class@@ \\{\\w+,(\\w+)\\}";
 	private final static Pattern defaultLabelPattern = Pattern.compile(defaultLabelPatternStr);
 
+	private final static String firstDeveloperIDPatternStr = ".+\\{'\\s([^,]+)',.+\\}"; 
+	private final static Pattern firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
 
 	public static void main(String[] args) throws Exception {
 		OnlineMain main = new OnlineMain();
@@ -147,6 +149,8 @@ public class OnlineMain {
 			int indexOfKey = 0;
 			String firstAttrLabel = null;
 			String defaultLabel = null;
+			String firstDeveloperID = null;
+			int indexOfDeveloperID = 0;
 
 			boolean dataPart = false;
 			for (String line : lines) {
@@ -177,6 +181,12 @@ public class OnlineMain {
 					if (line.startsWith("@data")) {
 						dataPart = true;
 					}
+					if(line.startsWith("@attribute meta_data-AuthorID")) {
+						Matcher m = firstDeveloperIDPattern.matcher(line);
+						m.find();
+						firstDeveloperID = m.group(1);
+						indexOfDeveloperID = attributeLineList.size()-3;
+					}
 				}
 			}
 			if(dataLineList.size() < 10) {
@@ -186,6 +196,7 @@ public class OnlineMain {
 			TreeMap<String,TreeSet<String>> commitTime_commitHash = new TreeMap<>();
 			HashMap<String,HashMap<String,String>> commitHash_key_data = new HashMap<>();
 			HashMap<String,HashMap<String,Boolean>> commitHash_key_isBuggy = new HashMap<>();
+			HashMap<String,String> commitHash_developer = new HashMap<>();
 
 			for(String line : dataLineList) {
 				String commitTime = parsingCommitTime(line,firstAttrCommitTime,indexOfCommitTime);
@@ -193,6 +204,7 @@ public class OnlineMain {
 				String commitHash = key.substring(0,key.indexOf("-"));
 				String aData = parsingDataLine(line,indexOfCommitTime,indexOfKey);
 				boolean isBuggy  = parsingBugCleanLabel(line,firstAttrLabel,defaultLabel);
+				String developerID = parsingDevloperID(line,firstDeveloperID,indexOfDeveloperID);
 
 				//put2commitTime_commitHash
 				TreeSet<String> commitHashs;
@@ -226,6 +238,9 @@ public class OnlineMain {
 					key_isBuggy.put(key, isBuggy);
 					commitHash_key_isBuggy.put(commitHash, key_isBuggy);
 				}
+				
+				//put2commitHash_developer
+				commitHash_developer.put(commitHash, developerID);
 			}
 
 			//set total first, last commit time
@@ -635,17 +650,19 @@ public class OnlineMain {
 			
 			//compute PBDF
 			OnlinePBDP onlinePBDP = new OnlinePBDP();
-			//set variable
+			//set default variable
 			onlinePBDP.setOutputPath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP"+File.separator);
 			onlinePBDP.setProjectName(baseSet.ProjectName());
 			onlinePBDP.setFirstRunDate(runDates.get(0));
-			onlinePBDP.setAttributeLineList(attributeLineList);
-			onlinePBDP.setKey_fixTime(key_fixTime);
-			onlinePBDP.setCommitTime_commitHash(commitTime_commitHash_experimental);
-			onlinePBDP.setCommitHash_key_isBuggy(commitHash_key_isBuggy);
-			onlinePBDP.setCommitHash_key_data(commitHash_key_data);
 			//call compute PBDP
-			onlinePBDP.profilingBasedDefectPrediction();
+			onlinePBDP.profilingBasedDefectPrediction(
+					attributeLineList,
+					key_fixTime,
+					commitTime_commitHash_experimental,
+					commitHash_key_data,
+					commitHash_key_isBuggy,
+					commitHash_developer);
+			
 			
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -903,6 +920,32 @@ public class OnlineMain {
 
 		return format.format(cal.getTime());
 
+	}
+	
+	private String rename(String adeveloper) {
+		if(adeveloper.startsWith("' ")) {
+			adeveloper = adeveloper.substring(2,adeveloper.lastIndexOf("'"));
+		}
+		return adeveloper;
+	}
+	
+	private String parsingDevloperID(String line, String firstDeveloperID, int indexOfDeveloperID) {
+
+		if((line.contains(","+indexOfDeveloperID+" "))) {
+			String developerIDPatternStr = ".+"+indexOfDeveloperID+"\\s([^,]+)";
+			Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
+			
+			Matcher m = developerIDPattern.matcher(line);
+			if(m.find()) {
+				return rename(m.group(1));
+			}else {
+				System.out.println(line);
+			}
+		}else {
+			return rename(firstDeveloperID);
+		}
+		
+		return null;
 	}
 
 	private static int calDateBetweenAandB(String preTime, String commitTime) throws Exception {
