@@ -632,6 +632,21 @@ public class OnlineMain {
 			//print result
 			saveResult(runDates,tr_size,tr_bugRatio,tr_run_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
 
+			
+			//compute PBDF
+			OnlinePBDP onlinePBDP = new OnlinePBDP();
+			//set variable
+			onlinePBDP.setOutputPath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP"+File.separator);
+			onlinePBDP.setProjectName(baseSet.ProjectName());
+			onlinePBDP.setFirstRunDate(runDates.get(0));
+			onlinePBDP.setAttributeLineList(attributeLineList);
+			onlinePBDP.setKey_fixTime(key_fixTime);
+			onlinePBDP.setCommitTime_commitHash(commitTime_commitHash_experimental);
+			onlinePBDP.setCommitHash_key_isBuggy(commitHash_key_isBuggy);
+			onlinePBDP.setCommitHash_key_data(commitHash_key_data);
+			//call compute PBDP
+			onlinePBDP.profilingBasedDefectPrediction();
+			
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 			}
