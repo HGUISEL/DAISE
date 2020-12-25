@@ -86,7 +86,7 @@ public class OnlineMain {
 
 			//make online arff file
 			ExtractData.main(extratOnlineargs(dataPath,baseSet.referenceFolderPath));
-			String OnlineMetricArffPath = baseSet.referenceFolderPath+File.separator+baseSet.projectName+"-online.arff";
+			String OnlineMetricArffPath = baseSet.referenceFolderPath+File.separator+baseSet.projectName+"-data-online.arff";
 			System.out.println(OnlineMetricArffPath);
 			
 			//mk result directory
@@ -653,8 +653,9 @@ public class OnlineMain {
 			//set default variable
 			onlinePBDP.setOutputPath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP"+File.separator);
 			onlinePBDP.setProjectName(baseSet.ProjectName());
-			onlinePBDP.setFirstRunDate(runDates.get(0));
-			//call compute PBDP
+			onlinePBDP.setRunDates(runDates);
+			onlinePBDP.setReferencePath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
+//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
 					key_fixTime,
@@ -1126,12 +1127,20 @@ class BaseSetting {
 		totalChange = 0;
 	}
 	public void setDataPath(String dataPath) {
-		Pattern pattern = Pattern.compile("(.+)/(.+).arff");
+		Pattern pattern1 = Pattern.compile("(.+)/(.+)-data");
 
-		Matcher matcher = pattern.matcher(dataPath);
+		Matcher matcher = pattern1.matcher(dataPath);
 		while(matcher.find()) {
 			this.referenceFolderPath = matcher.group(1);
 			this.projectName = matcher.group(2);
+		}
+		if(this.projectName == null) {
+			Pattern pattern2 = Pattern.compile("(.+)/(.+)-data");
+
+			Matcher matcher2 = pattern2.matcher(dataPath);
+			while(matcher2.find()) {
+				this.projectName = matcher2.group(2);
+			}
 		}
 
 	}
