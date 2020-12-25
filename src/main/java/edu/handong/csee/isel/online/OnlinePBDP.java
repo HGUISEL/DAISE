@@ -33,18 +33,32 @@ public class OnlinePBDP {
 	String outputPath;
 	String projectName;
 	String referencePath;
-
+	boolean accumulate;
+	int run = 1;
+	
 	ArrayList<RunDate> runDates;
 
-	int minCommit = 0;//mincommit 30 to 100 - option
-	int numOfCluster = 0; //option
+	int minCommit;//mincommit 30 to 100 - option
+	int numOfCluster; //option
 	ClusterEvaluation eval;
 
-	private final static String firstDeveloperIDPatternStr = "\\d+\\s+(\\d+)"; 
-	private final static Pattern firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
-
-	private final static String firstcommitTimePatternStr = ".+/Developer_(.+)_Online.csv";
-	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
+	private String firstDeveloperIDPatternStr ; 
+	private Pattern firstDeveloperIDPattern ;
+	private String firstcommitTimePatternStr ;
+	private Pattern firstcommitTimePattern ;
+	
+	HashMap<String, ArrayList<String>> accum_developerID_commitHash; 
+	
+	OnlinePBDP(){
+		this.firstDeveloperIDPatternStr = "\\d+\\s+(\\d+)"; 
+		this.firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
+		this.firstcommitTimePatternStr = ".+/Developer_(.+)_Online.csv";
+		this.firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
+		minCommit = 0;
+		numOfCluster = 0;
+		accum_developerID_commitHash = new HashMap<>();
+		accumulate = false;
+	}
 
 
 	public void profilingBasedDefectPrediction(ArrayList<String> attributeLineList,
@@ -62,13 +76,11 @@ public class OnlinePBDP {
 		String directoryPath = PBDPdir.getAbsolutePath();
 		PBDPdir.mkdir();
 
-
-		if(minCommit == 0) {
-			minCommit = 30;
-		}
-
-		int run = 1;
 		for(RunDate runDate : runDates) {
+			
+			numOfCluster = 0;
+			minCommit = 10;
+			
 			System.out.println("------------------Run = "+ run + " ------------------");
 
 			//cal the number of developer commit in training set
@@ -103,7 +115,7 @@ public class OnlinePBDP {
 					ArrayList<String> devID = numOfCommit_developer.get(numOfCommit);
 					trClusteringDeveloperID.addAll(devID);
 				}
-				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
+//				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
 
 				//count numOfCluster
 				//0. save only tr commitHash (top Devloper)
@@ -137,7 +149,9 @@ public class OnlinePBDP {
 			System.out.println();
 			System.out.println("test start");
 
-			//test set
+			//////////////////////
+			//	  test set      //
+			//////////////////////
 			HashMap<String,ArrayList<String>>te_developerID_commitHashs = countTheNumOfdeveloperAndCommit(gapE_teS, teE, commitTime_commitHash, commitHash_developer);
 			System.out.println("numOfDev in te peroid : "+te_developerID_commitHashs.size());
 
@@ -311,7 +325,7 @@ public class OnlinePBDP {
 		eval.setClusterer(em);
 		eval.evaluateClusterer(newData);
 		setEval(eval);
-		System.out.println("------------------------------NUM cluste --- "+eval.getNumClusters());
+//		System.out.println("------------------------------NUM cluste --- "+eval.getNumClusters());
 		///save developer cluster!
 		String developerIDPatternStr = "' (.+)',(.+)";
 		Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
@@ -329,11 +343,20 @@ public class OnlinePBDP {
 
 		//save to cluster_developer
 		for (Instance inst : newData) {
+			
 			int developerNameIndex = developerInstanceCSV.indexOf(inst.toString());
+			
+			if(!developerInstanceCSV.contains(inst.toString())){
+				System.out.println("this instance is not exist in data");
+				System.out.println(inst.toString());
+				System.out.println( );
+				continue;
+			}
+//			
 			String developerID = developerNameCSV.get(developerNameIndex);
 			int cluster = em.clusterInstance(inst);
 			ArrayList<String> developerList;
-
+			
 			if(cluster_developer.containsKey(cluster)) {
 				developerList = cluster_developer.get(cluster);
 				developerList.add(developerID);
@@ -409,16 +432,37 @@ public class OnlinePBDP {
 			TreeSet<String> commitHashs = commitTime_commitHash.get(commitTime);
 			for(String commitHash : commitHashs) {
 				String developerID = commitHash_developer.get(commitHash);
-
+				
 				ArrayList<String> dev_commitHash;
-				if(tr_developerID_commitHashs.containsKey(developerID)) {
-					dev_commitHash = tr_developerID_commitHashs.get(developerID);
-					dev_commitHash.add(commitHash);
+				
+				if(accumulate == false) {
+					if(tr_developerID_commitHashs.containsKey(developerID)) {
+						dev_commitHash = tr_developerID_commitHashs.get(developerID);
+						dev_commitHash.add(commitHash);
+					}else {
+						dev_commitHash = new ArrayList<String>();
+						dev_commitHash.add(commitHash);
+						tr_developerID_commitHashs.put(developerID, dev_commitHash);
+					}
 				}else {
-					dev_commitHash = new ArrayList<String>();
-					dev_commitHash.add(commitHash);
-					tr_developerID_commitHashs.put(developerID, dev_commitHash);
+					if(accum_developerID_commitHash.containsKey(developerID)) {
+						dev_commitHash = accum_developerID_commitHash.get(developerID);
+						dev_commitHash.add(commitHash);
+						int numOfCommit = dev_commitHash.size();
+						if(numOfCommit > 1000) {
+							for(int i = 0; i < (numOfCommit - 999); i++) {
+								dev_commitHash.remove(0);
+							}
+						}
+						System.out.println("dev_commitHash = "+dev_commitHash.size());
+						accum_developerID_commitHash.put(developerID, dev_commitHash);
+					}else {
+						dev_commitHash = new ArrayList<String>();
+						dev_commitHash.add(commitHash);
+						accum_developerID_commitHash.put(developerID, dev_commitHash);
+					}
 				}
+				
 			}
 		}
 
@@ -493,5 +537,31 @@ public class OnlinePBDP {
 	}
 
 
+	public void setAccumulate(boolean accumulate) {
+		this.accumulate = accumulate;
+	}
 
+}
+
+class RunningData{
+	String trS;
+	String trE_gapS;
+	String gapE_teS;
+	String teE;
+	int trCommit;
+	int trCluster;
+	int trDeveloper;
+	
+	int teCommit;
+	int teDeveloper;
+	
+	
+	RunningData(){
+		trS = null;
+		trE_gapS = null;
+		gapE_teS = null;
+		teE = null;
+	}
+	
+	
 }
