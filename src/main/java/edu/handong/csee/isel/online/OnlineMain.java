@@ -88,7 +88,7 @@ public class OnlineMain {
 			ExtractData.main(extratOnlineargs(dataPath,baseSet.referenceFolderPath));
 			String OnlineMetricArffPath = baseSet.referenceFolderPath+File.separator+baseSet.projectName+"-data-online.arff";
 			System.out.println(OnlineMetricArffPath);
-			
+
 			//mk result directory
 			File OnlineDir = new File(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+File.separator);
 			String directoryPath = OnlineDir.getAbsolutePath();
@@ -238,7 +238,7 @@ public class OnlineMain {
 					key_isBuggy.put(key, isBuggy);
 					commitHash_key_isBuggy.put(commitHash, key_isBuggy);
 				}
-				
+
 				//put2commitHash_developer
 				commitHash_developer.put(commitHash, developerID);
 			}
@@ -323,7 +323,7 @@ public class OnlineMain {
 			System.out.println("real str date : "+baseSet.StartDate());
 			System.out.println("real end date : "+baseSet.EndDate());
 			System.out.println();
-			
+
 			//set total buggy rate
 			float totalBugRatio = calBuggyRatio(baseSet.StartDate(),baseSet.EndDate(),commitHash_key_isBuggy,commitTime_commitHash_experimental);
 			baseSet.setTotalBuggyRatio(totalBugRatio);
@@ -647,7 +647,7 @@ public class OnlineMain {
 			//print result
 			saveResult(runDates,tr_size,tr_bugRatio,tr_run_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
 
-			
+
 			//compute PBDF
 			OnlinePBDP onlinePBDP = new OnlinePBDP();
 			//set default variable
@@ -655,7 +655,7 @@ public class OnlineMain {
 			onlinePBDP.setProjectName(baseSet.ProjectName());
 			onlinePBDP.setRunDates(runDates);
 			onlinePBDP.setReferencePath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
-//			call compute PBDP
+			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
 					key_fixTime,
@@ -663,8 +663,8 @@ public class OnlineMain {
 					commitHash_key_data,
 					commitHash_key_isBuggy,
 					commitHash_developer);
-			
-			
+
+
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 			}
@@ -922,20 +922,20 @@ public class OnlineMain {
 		return format.format(cal.getTime());
 
 	}
-	
+
 	private String rename(String adeveloper) {
 		if(adeveloper.startsWith("' ")) {
 			adeveloper = adeveloper.substring(2,adeveloper.lastIndexOf("'"));
 		}
 		return adeveloper;
 	}
-	
+
 	private String parsingDevloperID(String line, String firstDeveloperID, int indexOfDeveloperID) {
 
 		if((line.contains(","+indexOfDeveloperID+" "))) {
 			String developerIDPatternStr = ".+"+indexOfDeveloperID+"\\s([^,]+)";
 			Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
-			
+
 			Matcher m = developerIDPattern.matcher(line);
 			if(m.find()) {
 				return rename(m.group(1));
@@ -945,7 +945,7 @@ public class OnlineMain {
 		}else {
 			return rename(firstDeveloperID);
 		}
-		
+
 		return null;
 	}
 

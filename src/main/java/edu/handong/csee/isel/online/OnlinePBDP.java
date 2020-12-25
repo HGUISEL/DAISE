@@ -35,18 +35,18 @@ public class OnlinePBDP {
 	String referencePath;
 
 	ArrayList<RunDate> runDates;
-	
+
 	int minCommit = 0;//mincommit 30 to 100 - option
 	int numOfCluster = 0; //option
 	ClusterEvaluation eval;
-	
+
 	private final static String firstDeveloperIDPatternStr = "\\d+\\s+(\\d+)"; 
 	private final static Pattern firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
-	
+
 	private final static String firstcommitTimePatternStr = ".+/Developer_(.+)_Online.csv";
 	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
-	
-	
+
+
 	public void profilingBasedDefectPrediction(ArrayList<String> attributeLineList,
 			TreeMap<String,String> key_fixTime,
 			TreeMap<String,TreeSet<String>> commitTime_commitHash,
@@ -56,21 +56,21 @@ public class OnlinePBDP {
 		System.out.println();
 		System.out.println("---------------Start Online PBDP2----------------------");
 		System.out.println();
-		
+
 		//make PBDP directory
 		File PBDPdir = new File(outputPath);
 		String directoryPath = PBDPdir.getAbsolutePath();
 		PBDPdir.mkdir();
-		
-		
+
+
 		if(minCommit == 0) {
 			minCommit = 30;
 		}
-		
+
 		int run = 1;
 		for(RunDate runDate : runDates) {
 			System.out.println("------------------Run = "+ run + " ------------------");
-	
+
 			//cal the number of developer commit in training set
 			String trS = runDate.getTrS();//training start time
 			String trE_gapS = runDate.getTrE_gapS();//training end time == gap start time
@@ -81,17 +81,17 @@ public class OnlinePBDP {
 			System.out.println("gapE_teS = "+ gapE_teS);
 			System.out.println("teE = "+ teE);
 			System.out.println();
-			
+
 			//make developerID_commitHashs in training period
 			HashMap<String,ArrayList<String>> tr_developerID_commitHashs; //in tr period
-			
+
 			tr_developerID_commitHashs = countTheNumOfdeveloperAndCommit(trS, trE_gapS, commitTime_commitHash, commitHash_developer);
 			System.out.println("numOfDev in tr peroid : "+tr_developerID_commitHashs.size());
-			
+
 			//count the number of dveloper commit tr peroid- descending order in
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer;
 			numOfCommit_developer = countTheNumOfDeveloperCommit(tr_developerID_commitHashs);
-			
+
 			//pick dev id : dev commit > "minCommit"
 			HashMap<Integer,ArrayList<String>> tr_cluster_developerID;
 			while(true) {
@@ -104,7 +104,7 @@ public class OnlinePBDP {
 					trClusteringDeveloperID.addAll(devID);
 				}
 				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
-			
+
 				//count numOfCluster
 				//0. save only tr commitHash (top Devloper)
 				ArrayList<String>trClusteringCommitHash = saveDeveloperCommitHash(trClusteringDeveloperID,tr_developerID_commitHashs);
@@ -119,7 +119,7 @@ public class OnlinePBDP {
 				tr_cluster_developerID = clusteringProfilingDeveloper(developerProfiling);
 				//3. parsing cluster result
 				numOfCluster = tr_cluster_developerID.size();
-				
+
 				if(numOfCluster != 1) {
 					break;
 				}else if(minCommit == 100){
@@ -128,47 +128,47 @@ public class OnlinePBDP {
 					minCommit++;
 				}
 			}
-			
+
 			System.out.println("Final minCommit of tr : "+minCommit);
 			System.out.println("Final numOfCluster of tr : "+numOfCluster);
-			
+
 			//make tr arff file in each clustering
 			makeArffFileInEachClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, "tr");
 			System.out.println();
 			System.out.println("test start");
-			
+
 			//test set
 			HashMap<String,ArrayList<String>>te_developerID_commitHashs = countTheNumOfdeveloperAndCommit(gapE_teS, teE, commitTime_commitHash, commitHash_developer);
 			System.out.println("numOfDev in te peroid : "+te_developerID_commitHashs.size());
-			
+
 			//find the cluster of test developer
 			//save the profiling csv file of each developer 
 			ArrayList<String> teProfilingMetadatacsvPath = makeCsvFileFromTestDeveloper(te_developerID_commitHashs);
 			ArrayList<File> teDeveloperProfiling = collectingTestDeveloperProfilingMetrics(teProfilingMetadatacsvPath);
-					
+
 			//read each test developer csv and find cluster
 			HashMap<Integer,ArrayList<String>> teCluster_developerID = clusteringTestProfilingDeveloper(teDeveloperProfiling);
-			
+
 			//make te arff file in each clustering
 			makeArffFileInEachClustering(teCluster_developerID, te_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, "te");
-		
+
 			run++;
-//			break;
+			//			break;
 		}	
-		
-		
+
+
 	}
 
 	private HashMap<Integer, ArrayList<String>> clusteringTestProfilingDeveloper(ArrayList<File> teDeveloperProfiling) throws Exception {
 		HashMap<Integer,ArrayList<String>> teCluster_developerID = new HashMap<>();
 		ClusterEvaluation eval = getEval();
-		
+
 		for(File developerProfiling : teDeveloperProfiling) {
-			
+
 			Matcher m = firstcommitTimePattern.matcher(developerProfiling.toString());
 			m.find();
 			String developerID = m.group(1);
-			
+
 			CSVLoader loader = new CSVLoader();
 			loader.setSource(developerProfiling);
 
@@ -187,9 +187,9 @@ public class OnlinePBDP {
 			Instances newData = Filter.useFilter(data, removeFilter);
 
 			eval.evaluateClusterer(newData);
-//	        System.out.println("# of clusters: " + eval.getNumClusters());
+			//	        System.out.println("# of clusters: " + eval.getNumClusters());
 			int cluster = countNumberOfCluster(eval.clusterResultsToString());
-			
+
 			ArrayList<String> teDeveloperList;
 			if(teCluster_developerID.containsKey(cluster)) {
 				teDeveloperList = teCluster_developerID.get(cluster);
@@ -200,10 +200,10 @@ public class OnlinePBDP {
 				teCluster_developerID.put(cluster, teDeveloperList);
 			}
 		}
-		
+
 		return teCluster_developerID;
 	}
-	
+
 	private int countNumberOfCluster(String clustereddata) {
 		String[] lines = clustereddata.split("\n");
 		int numOfCluster = 0;
@@ -215,69 +215,33 @@ public class OnlinePBDP {
 				break;
 			}
 		}
-		
+
 		return numOfCluster;
 	}
 
 	private ArrayList<File> collectingTestDeveloperProfilingMetrics(ArrayList<String> teProfilingMetadatacsvPath) throws Exception{
 		ArrayList<File> developerProfiling = new ArrayList<>();
-		MainDAISE DAISEmain = new MainDAISE();
-		
+
 		for(String path : teProfilingMetadatacsvPath) {
-//			collectingDeveloperProfilingMetrics(path);
-//			
-//			
-//			String[] DAISEargs = new String[4];
-//
-//			DAISEargs[0] = "-m";
-//			DAISEargs[1] = path;
-//			DAISEargs[2] = "-o";
-//			DAISEargs[3] = referencePath.toString();
-//
-//			DAISEmain.run(DAISEargs);
 			developerProfiling.add(new File(collectingDeveloperProfilingMetrics(path)));
 		}
-		
+
 		return developerProfiling;
 	}
 
 	private ArrayList<String> makeCsvFileFromTestDeveloper(
 			HashMap<String, ArrayList<String>> te_developerID_commitHashs) {
 		ArrayList<String> teProfilingMetadatacsvPath = new ArrayList<>();
-		
+
 		try {
 			for(String devID : te_developerID_commitHashs.keySet()) {
 				ArrayList<String> commitHashs = te_developerID_commitHashs.get(devID);
 
 				String profilingMetadatacsvPath = makeCsvFileFromTopTenDeveloperInTraining(commitHashs);
-
-				
-//				//read csv
-//				Reader in = new FileReader(referencePath+File.separator+projectName+"_Label.csv");
-//				Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
-//
-//				//save csv
-//				String resultCSVPath = referencePath+File.separator+devID+"_Online.csv";
-//				BufferedWriter writer = new BufferedWriter(new FileWriter( new File(resultCSVPath)));
-//				CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("isBuggy","Modify Lines","Add Lines","Delete Lines","Distribution modified Lines","numOfBIC","AuthorID","fileAge","SumOfSourceRevision","SumOfDeveloper","CommitHour","CommitDate","AGE","numOfSubsystems","numOfDirectories","numOfFiles","NUC","developerExperience","REXP","SEXP","LT","commitTime","Key"));
-//
-//				for (CSVRecord record : records) {
-//					Metrics metrics = new Metrics(record);
-//					String key = metrics.getKey();
-//
-//					for(String commitHash : commitHashs) {
-//						if(key.startsWith(commitHash)) {
-//							csvPrinter.printRecord(metrics.getIsBuggy(),metrics.getModify_Lines(),metrics.getAdd_Lines(),metrics.getDelete_Lines(),metrics.getDistribution_modified_Lines(),metrics.getNumOfBIC(),metrics.getAuthorID(),metrics.getFileAge(),metrics.getSumOfSourceRevision(),metrics.getSumOfDeveloper(),metrics.getCommitHour(),metrics.getCommitDate(),metrics.getAGE(),metrics.getNumOfSubsystems(),metrics.getNumOfDirectories(),metrics.getNumOfFiles(),metrics.getNUC(),metrics.getDeveloperExperience(),metrics.getREXP(),metrics.getSEXP(),metrics.getLT(),metrics.getCommitTime(),key);
-//							break;
-//						}
-//					}
-//				}
-
 				teProfilingMetadatacsvPath.add(profilingMetadatacsvPath);
-//				csvPrinter.close();
+
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return teProfilingMetadatacsvPath;
@@ -285,21 +249,21 @@ public class OnlinePBDP {
 
 	private void makeArffFileInEachClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run, String string) throws Exception {
-		
-		
+
+
 		for(int cluster : cluster_developerID.keySet()) {
 			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_"+string+".arff");
 			// ./run_1_cluster_2_tr.arff
 			StringBuffer newContentBuf = new StringBuffer();
 			ArrayList<String> developerIDs = cluster_developerID.get(cluster);
-			
+
 			//write attribute
 			for (String line : attributeLineList) {
 				if(line.startsWith("@attribute meta_data-commitTime")) continue;
 				if(line.startsWith("@attribute Key {")) continue;
 				newContentBuf.append(line + "\n");
 			}
-			
+
 			//write data
 			for(String developerID : tr_developerID_commitHashs.keySet()) {
 				if(developerIDs.contains(developerID)) {
@@ -316,12 +280,12 @@ public class OnlinePBDP {
 			FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 
 		}
-		
+
 	}
 
 	private HashMap<Integer, ArrayList<String>> clusteringProfilingDeveloper(File developerProfiling) throws Exception {
 		HashMap<Integer,ArrayList<String>> cluster_developer = new HashMap<>();
-		
+
 		CSVLoader loader = new CSVLoader();
 		loader.setSource(developerProfiling);
 
@@ -362,7 +326,7 @@ public class OnlinePBDP {
 				developerInstanceCSV.add(m.group(2));
 			}
 		}
-		
+
 		//save to cluster_developer
 		for (Instance inst : newData) {
 			int developerNameIndex = developerInstanceCSV.indexOf(inst.toString());
@@ -379,23 +343,23 @@ public class OnlinePBDP {
 				cluster_developer.put(cluster, developerList);
 			}
 		}
-		
+
 		return cluster_developer;
 	}
 
 	private ArrayList<String> saveDeveloperCommitHash(ArrayList<String> clusteringDeveloperID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs) {
 		ArrayList<String> trClusteringCommitHash = new ArrayList<>();
-		
+
 		for(String devID : tr_developerID_commitHashs.keySet()) {
 
 			if(clusteringDeveloperID.contains(devID)) {
 				ArrayList<String> commitHashs = tr_developerID_commitHashs.get(devID);
 				trClusteringCommitHash.addAll(commitHashs);
 			}
-			
+
 		}
-		
+
 		return trClusteringCommitHash;
 	}
 
@@ -416,10 +380,10 @@ public class OnlinePBDP {
 				numOfCommit_developer.put(numOfCommit, developers);
 			}
 		}
-		
+
 		return numOfCommit_developer;
 	}
-	
+
 	private String collectingDeveloperProfilingMetrics(String path) throws Exception {
 		String[] DAISEargs = new String[4];
 
@@ -435,9 +399,9 @@ public class OnlinePBDP {
 
 	private HashMap<String, ArrayList<String>> countTheNumOfdeveloperAndCommit(String trS, String trE_gapS,
 			TreeMap<String, TreeSet<String>> commitTime_commitHash, HashMap<String, String> commitHash_developer) {
-		
+
 		HashMap<String,ArrayList<String>> tr_developerID_commitHashs = new HashMap<>();
-		
+
 		for(String commitTime : commitTime_commitHash.keySet()) {
 			if(!(trS.compareTo(commitTime)<=0 && commitTime.compareTo(trE_gapS)<=0))
 				continue;
@@ -460,17 +424,17 @@ public class OnlinePBDP {
 
 		return tr_developerID_commitHashs;
 	}
-	
-	
 
-	
+
+
+
 	private String makeCsvFileFromTopTenDeveloperInTraining(ArrayList<String> trCommitHash) {
 
 		try {
 			//read csv
 			Reader in = new FileReader(referencePath+File.separator+projectName+"_Label.csv");
 			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
-			
+
 			//save csv
 			String resultCSVPath = referencePath+File.separator+projectName+"_Online.csv";
 			BufferedWriter writer = new BufferedWriter(new FileWriter( new File(resultCSVPath)));
@@ -479,7 +443,7 @@ public class OnlinePBDP {
 			for (CSVRecord record : records) {
 				Metrics metrics = new Metrics(record);
 				String key = metrics.getKey();
-				
+
 				for(String commitHash : trCommitHash) {
 					if(key.startsWith(commitHash)) {
 						csvPrinter.printRecord(metrics.getIsBuggy(),metrics.getModify_Lines(),metrics.getAdd_Lines(),metrics.getDelete_Lines(),metrics.getDistribution_modified_Lines(),metrics.getNumOfBIC(),metrics.getAuthorID(),metrics.getFileAge(),metrics.getSumOfSourceRevision(),metrics.getSumOfDeveloper(),metrics.getCommitHour(),metrics.getCommitDate(),metrics.getAGE(),metrics.getNumOfSubsystems(),metrics.getNumOfDirectories(),metrics.getNumOfFiles(),metrics.getNUC(),metrics.getDeveloperExperience(),metrics.getREXP(),metrics.getSEXP(),metrics.getLT(),metrics.getCommitTime(),key);
@@ -491,7 +455,6 @@ public class OnlinePBDP {
 			csvPrinter.close();
 			return resultCSVPath;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
@@ -528,7 +491,7 @@ public class OnlinePBDP {
 	public void setEval(ClusterEvaluation eval) {
 		this.eval = eval;
 	}
-	
-	
-	
+
+
+
 }
