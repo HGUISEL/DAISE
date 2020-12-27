@@ -26,6 +26,7 @@ import weka.clusterers.EM;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
+import weka.core.pmml.jaxbbindings.Cluster;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 
@@ -333,7 +334,8 @@ public class OnlinePBDP {
 		Instances newData = Filter.useFilter(data, removeFilter);
 
 		//apply EM clustering algorithm
-		Clusterer em = new EM();
+		EM em = new EM(); //option
+		em.setNumClusters(2); //option
 		em.buildClusterer(newData);
 
 		ClusterEvaluation eval = new ClusterEvaluation();
