@@ -75,11 +75,14 @@ public class OnlinePBDP {
 		File PBDPdir = new File(outputPath);
 		String directoryPath = PBDPdir.getAbsolutePath();
 		PBDPdir.mkdir();
+		
+		int BeforeNumOfDeveloper = 0;
 
 		for(RunDate runDate : runDates) {
 			
 			numOfCluster = 0;
 			minCommit = 10;
+			BeforeNumOfDeveloper = 0;
 			
 			System.out.println("------------------Run = "+ run + " ------------------");
 
@@ -105,7 +108,7 @@ public class OnlinePBDP {
 			numOfCommit_developer = countTheNumOfDeveloperCommit(tr_developerID_commitHashs);
 
 			//pick dev id : dev commit > "minCommit"
-			HashMap<Integer,ArrayList<String>> tr_cluster_developerID;
+			HashMap<Integer,ArrayList<String>> tr_cluster_developerID = null;
 			while(true) {
 				//pick dev id : condition : commit > "minCommit"
 				ArrayList<String> trClusteringDeveloperID = new ArrayList<String>();
@@ -114,6 +117,14 @@ public class OnlinePBDP {
 					if(numOfCommit < minCommit) break;
 					ArrayList<String> devID = numOfCommit_developer.get(numOfCommit);
 					trClusteringDeveloperID.addAll(devID);
+				}
+				if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
+					if(minCommit == 100){
+						break;
+					}else {
+						minCommit++;
+						continue;
+					}
 				}
 //				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
 
@@ -138,6 +149,7 @@ public class OnlinePBDP {
 					break;
 				}else {
 					minCommit++;
+					BeforeNumOfDeveloper = trClusteringDeveloperID.size();
 				}
 			}
 
@@ -167,6 +179,7 @@ public class OnlinePBDP {
 			makeArffFileInEachClustering(teCluster_developerID, te_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, "te");
 
 			run++;
+
 			//			break;
 		}	
 
