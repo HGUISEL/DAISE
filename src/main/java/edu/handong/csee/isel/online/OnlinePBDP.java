@@ -68,7 +68,9 @@ public class OnlinePBDP {
 			HashMap<String,HashMap<String,Boolean>> commitHash_key_isBuggy,
 			HashMap<String,String> commitHash_developer) throws Exception {
 		System.out.println();
-		System.out.println("---------------Start Online PBDP2----------------------");
+		System.out.println("################################################################");
+		System.out.println("###        Start Online PBDP2   |   Accumulate = "+accumulate+"       ###");
+		System.out.println("################################################################");
 		System.out.println();
 
 		//make PBDP directory
@@ -100,7 +102,7 @@ public class OnlinePBDP {
 			//make developerID_commitHashs in training period
 			HashMap<String,ArrayList<String>> tr_developerID_commitHashs; //in tr period
 
-			tr_developerID_commitHashs = countTheNumOfdeveloperAndCommit(trS, trE_gapS, commitTime_commitHash, commitHash_developer);
+			tr_developerID_commitHashs = countTheNumOfdeveloperAndCommit(trS, trE_gapS, commitTime_commitHash, commitHash_developer,"tr");
 			System.out.println("numOfDev in tr peroid : "+tr_developerID_commitHashs.size());
 
 			//count the number of dveloper commit tr peroid- descending order in
@@ -119,7 +121,7 @@ public class OnlinePBDP {
 					trClusteringDeveloperID.addAll(devID);
 				}
 				if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
-					if(minCommit == 100){
+					if(minCommit == 50){
 						break;
 					}else {
 						minCommit++;
@@ -145,7 +147,7 @@ public class OnlinePBDP {
 
 				if(numOfCluster != 1) {
 					break;
-				}else if(minCommit == 100){
+				}else if(minCommit == 50){
 					break;
 				}else {
 					minCommit++;
@@ -164,7 +166,7 @@ public class OnlinePBDP {
 			//////////////////////
 			//	  test set      //
 			//////////////////////
-			HashMap<String,ArrayList<String>>te_developerID_commitHashs = countTheNumOfdeveloperAndCommit(gapE_teS, teE, commitTime_commitHash, commitHash_developer);
+			HashMap<String,ArrayList<String>>te_developerID_commitHashs = countTheNumOfdeveloperAndCommit(gapE_teS, teE, commitTime_commitHash, commitHash_developer,"te");
 			System.out.println("numOfDev in te peroid : "+te_developerID_commitHashs.size());
 
 			//find the cluster of test developer
@@ -376,7 +378,7 @@ public class OnlinePBDP {
 			}else {
 				developerList = new ArrayList<>();
 				developerList.add(developerID);
-				cluster_developer.put(cluster, developerList);
+				cluster_developer.put(cluster+1, developerList);
 			}
 		}
 
@@ -434,7 +436,7 @@ public class OnlinePBDP {
 	}
 
 	private HashMap<String, ArrayList<String>> countTheNumOfdeveloperAndCommit(String trS, String trE_gapS,
-			TreeMap<String, TreeSet<String>> commitTime_commitHash, HashMap<String, String> commitHash_developer) {
+			TreeMap<String, TreeSet<String>> commitTime_commitHash, HashMap<String, String> commitHash_developer, String string) {
 
 		HashMap<String,ArrayList<String>> tr_developerID_commitHashs = new HashMap<>();
 
@@ -448,7 +450,7 @@ public class OnlinePBDP {
 				
 				ArrayList<String> dev_commitHash;
 				
-				if(accumulate == false) {
+				if(accumulate == false || (string.compareTo("tr")==0) ) {
 					if(tr_developerID_commitHashs.containsKey(developerID)) {
 						dev_commitHash = tr_developerID_commitHashs.get(developerID);
 						dev_commitHash.add(commitHash);
@@ -462,12 +464,10 @@ public class OnlinePBDP {
 						dev_commitHash = accum_developerID_commitHash.get(developerID);
 						dev_commitHash.add(commitHash);
 						int numOfCommit = dev_commitHash.size();
-						if(numOfCommit > 1000) {
-							for(int i = 0; i < (numOfCommit - 999); i++) {
-								dev_commitHash.remove(0);
-							}
+						if(numOfCommit > 500) {
+							dev_commitHash.remove(0);
 						}
-						System.out.println("dev_commitHash = "+dev_commitHash.size());
+//						System.out.println("dev_commitHash = "+developerID+" : "+dev_commitHash.size());
 						accum_developerID_commitHash.put(developerID, dev_commitHash);
 					}else {
 						dev_commitHash = new ArrayList<String>();
@@ -478,8 +478,11 @@ public class OnlinePBDP {
 				
 			}
 		}
-
-		return tr_developerID_commitHashs;
+		if(accumulate == false || string.compareTo("tr")==0)
+			return tr_developerID_commitHashs;
+		else {
+			return accum_developerID_commitHash;
+		}
 	}
 
 

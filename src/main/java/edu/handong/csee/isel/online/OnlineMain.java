@@ -33,6 +33,7 @@ import edu.handong.csee.isel.data.ExtractData;
 public class OnlineMain {
 	String dataPath;
 	String BICpath;
+	boolean accumulate;
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
@@ -655,6 +656,7 @@ public class OnlineMain {
 			onlinePBDP.setProjectName(baseSet.ProjectName());
 			onlinePBDP.setRunDates(runDates);
 			onlinePBDP.setReferencePath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
+			onlinePBDP.setAccumulate(accumulate);
 			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
@@ -1014,7 +1016,7 @@ public class OnlineMain {
 				baseSet.setGapDays(0);
 				baseSet.setUpdateDays(0);
 			}
-
+			accumulate = cmd.hasOption("a");
 			help = cmd.hasOption("h");
 
 		} catch (Exception e) {
@@ -1061,6 +1063,12 @@ public class OnlineMain {
 				.hasArg()
 				.argName("End date")
 				.build());
+		
+		options.addOption(Option.builder("u").longOpt("updatedays")
+				.desc("update date for collecting training data. Format: days")
+				.hasArg()
+				.argName("Update date")
+				.build());
 
 		options.addOption(Option.builder("u").longOpt("updatedays")
 				.desc("update date for collecting training data. Format: days")
@@ -1072,6 +1080,11 @@ public class OnlineMain {
 				.desc("gap date for collecting training data. Format: days")
 				.hasArg()
 				.argName("Gap date")
+				.build());
+		
+		options.addOption(Option.builder("a").longOpt("isAccumulate")
+				.desc("Are the developers of the test set accumulated?.")
+				.argName("accumulate?")
 				.build());
 
 		options.addOption(Option.builder("h").longOpt("help")
