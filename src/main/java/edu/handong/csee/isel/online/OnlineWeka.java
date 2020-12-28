@@ -37,6 +37,7 @@ public class OnlineWeka {
 	 */
 	static ArrayList<String> runs ;
 	static ArrayList<String> clusters ;
+	static ArrayList<String> classes ;
 	static HashMap<String,ArrayList<Integer>> bc_num  ;
 	static HashMap<String,ArrayList<Double>> precision ;
 	static HashMap<String,ArrayList<Double>> recall ;
@@ -78,12 +79,13 @@ public class OnlineWeka {
 		BufferedWriter writer;
 		try {
 			writer = new BufferedWriter(new FileWriter(output));
-			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","precision","recall","fMeasure","mcc"));
+			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","precision","recall","fMeasure","mcc","class"));
 			
 			
 			for(int i = 0; i < runs.size(); i++) {
 				String run = runs.get(i);
 				String cluster = clusters.get(i);
+				String Class = classes.get(i);
 				int total = bc_num.get("total").get(i);
 				int buggy = bc_num.get("buggy").get(i);
 				int clean = bc_num.get("clean").get(i);
@@ -93,7 +95,7 @@ public class OnlineWeka {
 					double r = recall.get(algorithm).get(i);
 					double f = fMeasure.get(algorithm).get(i);
 					double m = mcc.get(algorithm).get(i);
-					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,p,r,f,m);
+					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,p,r,f,m,Class);
 				}
 			}
 			csvPrinter.close();
@@ -117,6 +119,7 @@ public class OnlineWeka {
 		
 		runs = new ArrayList<>();
 		clusters = new ArrayList<>();
+		classes = new ArrayList<>();
 	}
 
 	private static void onlinePBDP(ArrayList<String> fileName, String arffFolder) {
@@ -153,6 +156,7 @@ public class OnlineWeka {
 			
 			finishFileName.add(tr_arff);
 			finishFileName.add(te_arff);
+//			break;
 		}
 		
 	}
@@ -163,6 +167,7 @@ public class OnlineWeka {
 			Instances Data = source.getDataSet();
 			Data.setClassIndex(0);
 			System.out.println(Data.classAttribute());
+			classes.add(Data.classAttribute().toString());
 			
 			AttributeStats attStats = Data.attributeStats(0);
 			
@@ -198,12 +203,6 @@ public class OnlineWeka {
 				Evaluation evaluation = new Evaluation(Data);
 				
 				evaluation.evaluateModel(classifyModel, testData);
-				
-				//save recall fscore mcc etc...
-				saveValue(precision, algorithm, evaluation.precision(0));
-				saveValue(recall, algorithm, evaluation.recall(0));
-				saveValue(fMeasure, algorithm, evaluation.fMeasure(0));
-				saveValue(mcc, algorithm, evaluation.matthewsCorrelationCoefficient(0));
 
 				
 				//save num of buggy and clean instance
@@ -215,10 +214,26 @@ public class OnlineWeka {
 				ArrayList<Integer> b = bc_num.get(m.group(2));
 				ArrayList<Integer> c = bc_num.get("total");
 				
+				int index = 10;
+				if(m.group(1).compareTo("buggy") == 0) index = 0;
+				else index = 1;
+				
 				a.add(attStats.nominalCounts[0]);
 				b.add(attStats.nominalCounts[1]);
 				c.add(attStats.totalCount);
 				
+				//save recall fscore mcc etc...
+				System.out.println(index);
+				saveValue(precision, algorithm, evaluation.precision(index));
+				saveValue(recall, algorithm, evaluation.recall(index));
+				saveValue(fMeasure, algorithm, evaluation.fMeasure(index));
+				saveValue(mcc, algorithm, evaluation.matthewsCorrelationCoefficient(index));
+				
+//				
+//				String detail = evaluation.toClassDetailsString();
+//				System.out.println("=================================");
+//				System.out.println(detail);
+//				System.out.println( );
 				
 //				for(int i = 1; i < Integer.parseInt(args[2])+1; i++) {
 //					evaluation.crossValidateModel(classifyModel, Data, 10, new Random(i));
