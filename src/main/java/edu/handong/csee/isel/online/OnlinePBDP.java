@@ -29,6 +29,7 @@ import weka.core.converters.CSVLoader;
 import weka.core.pmml.jaxbbindings.Cluster;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
+import weka.clusterers.SimpleKMeans;
 
 public class OnlinePBDP {
 	String outputPath;
@@ -154,6 +155,7 @@ public class OnlinePBDP {
 					minCommit++;
 					BeforeNumOfDeveloper = trClusteringDeveloperID.size();
 				}
+				break;
 			}
 			System.exit(0);
 			System.out.println("Final minCommit of tr : "+minCommit);
@@ -326,6 +328,7 @@ public class OnlinePBDP {
 		for (int i = 0, j = 1; i < data.numAttributes()-1; i++,j++) {
 			toSelect[i] = j;
 		}
+		
 		//delete developer ID column of CSV file
 		Remove removeFilter = new Remove();
 		removeFilter.setAttributeIndicesArray(toSelect);
@@ -337,12 +340,13 @@ public class OnlinePBDP {
 		EM em = new EM(); //option
 		em.setNumClusters(3); //option
 		em.buildClusterer(newData);
-
-		ClusterEvaluation eval = new ClusterEvaluation();
-		eval.setClusterer(em);
-		eval.evaluateClusterer(newData);
-		setEval(eval);
-//		System.out.println("------------------------------NUM cluste --- "+eval.getNumClusters());
+		
+//		SimpleKMeans sk = new SimpleKMeans();
+//		sk.setSeed(10);
+//		sk.setPreserveInstancesOrder(true);
+//		sk.setNumClusters(3);
+//		sk.buildClusterer(newData);
+		
 		///save developer cluster!
 		String developerIDPatternStr = "' (.+)',(.+)";
 		Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
@@ -357,21 +361,21 @@ public class OnlinePBDP {
 				developerInstanceCSV.add(m.group(2));
 			}
 		}
-
-		//save to cluster_developer
-		for (Instance inst : newData) {
-			
-			int developerNameIndex = developerInstanceCSV.indexOf(inst.toString());
-			
-			if(!developerInstanceCSV.contains(inst.toString())){
-				System.out.println("this instance is not exist in data");
-				System.out.println(inst.toString());
-				System.out.println( );
-				continue;
+		
+		ClusterEvaluation eval = new ClusterEvaluation();
+		eval.setClusterer(em);
+		eval.evaluateClusterer(newData);
+		setEval(eval);
+		System.out.println("------------------------------NUM cluste --- "+eval.getNumClusters());
+		
+		double[] assignments = eval.getClusterAssignments();
+		
+		for(int i = 0; i < newData.size(); i++) {
+			if(newData.instance(i).toString().compareTo(developerInstanceCSV.get(i)) != 0) {
+				System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Different!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 			}
-//			
-			String developerID = developerNameCSV.get(developerNameIndex);
-			int cluster = em.clusterInstance(inst);
+			int cluster = (int)assignments[i] + 1;
+			String developerID = developerNameCSV.get(i);
 			ArrayList<String> developerList;
 			
 			if(cluster_developer.containsKey(cluster)) {
@@ -380,7 +384,7 @@ public class OnlinePBDP {
 			}else {
 				developerList = new ArrayList<>();
 				developerList.add(developerID);
-				cluster_developer.put(cluster+1, developerList);
+				cluster_developer.put(cluster, developerList);
 			}
 		}
 
