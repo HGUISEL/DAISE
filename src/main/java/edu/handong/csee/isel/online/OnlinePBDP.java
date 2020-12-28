@@ -135,7 +135,7 @@ public class OnlinePBDP {
 				//0. save only tr commitHash (top Devloper)
 				ArrayList<String>trClusteringCommitHash = saveDeveloperCommitHash(trClusteringDeveloperID,tr_developerID_commitHashs);
 				//1. make developer profiling data set
-				String profilingMetadatacsvPath = makeCsvFileFromTopTenDeveloperInTraining(trClusteringCommitHash);
+				String profilingMetadatacsvPath = makeCsvFileFromTopTenDeveloperInTraining(trClusteringCommitHash,"tr");
 				if(profilingMetadatacsvPath == null) {
 					System.out.println("profilingMetadatacsvPath is null");
 					System.exit(0);
@@ -155,7 +155,7 @@ public class OnlinePBDP {
 					BeforeNumOfDeveloper = trClusteringDeveloperID.size();
 				}
 			}
-
+			System.exit(0);
 			System.out.println("Final minCommit of tr : "+minCommit);
 			System.out.println("Final numOfCluster of tr : "+numOfCluster);
 
@@ -183,7 +183,7 @@ public class OnlinePBDP {
 
 			run++;
 
-			//			break;
+//			break;
 		}	
 
 
@@ -219,7 +219,7 @@ public class OnlinePBDP {
 			eval.evaluateClusterer(newData);
 			//	        System.out.println("# of clusters: " + eval.getNumClusters());
 			int cluster = countNumberOfCluster(eval.clusterResultsToString());
-
+			System.out.println("developerID : Cluster = "+developerID+" : "+cluster);
 			ArrayList<String> teDeveloperList;
 			if(teCluster_developerID.containsKey(cluster)) {
 				teDeveloperList = teCluster_developerID.get(cluster);
@@ -267,7 +267,7 @@ public class OnlinePBDP {
 			for(String devID : te_developerID_commitHashs.keySet()) {
 				ArrayList<String> commitHashs = te_developerID_commitHashs.get(devID);
 
-				String profilingMetadatacsvPath = makeCsvFileFromTopTenDeveloperInTraining(commitHashs);
+				String profilingMetadatacsvPath = makeCsvFileFromTopTenDeveloperInTraining(commitHashs,devID);
 				teProfilingMetadatacsvPath.add(profilingMetadatacsvPath);
 
 			}
@@ -335,7 +335,7 @@ public class OnlinePBDP {
 
 		//apply EM clustering algorithm
 		EM em = new EM(); //option
-		em.setNumClusters(2); //option
+		em.setNumClusters(3); //option
 		em.buildClusterer(newData);
 
 		ClusterEvaluation eval = new ClusterEvaluation();
@@ -490,7 +490,7 @@ public class OnlinePBDP {
 
 
 
-	private String makeCsvFileFromTopTenDeveloperInTraining(ArrayList<String> trCommitHash) {
+	private String makeCsvFileFromTopTenDeveloperInTraining(ArrayList<String> trCommitHash, String devID) {
 
 		try {
 			//read csv
@@ -498,7 +498,7 @@ public class OnlinePBDP {
 			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
 
 			//save csv
-			String resultCSVPath = referencePath+File.separator+projectName+"_Online.csv";
+			String resultCSVPath = referencePath+File.separator+devID+"_Online.csv";
 			BufferedWriter writer = new BufferedWriter(new FileWriter( new File(resultCSVPath)));
 			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("isBuggy","Modify Lines","Add Lines","Delete Lines","Distribution modified Lines","numOfBIC","AuthorID","fileAge","SumOfSourceRevision","SumOfDeveloper","CommitHour","CommitDate","AGE","numOfSubsystems","numOfDirectories","numOfFiles","NUC","developerExperience","REXP","SEXP","LT","commitTime","Key"));
 
