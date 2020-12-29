@@ -44,7 +44,7 @@ public class OnlineWeka {
 	static HashMap<String,ArrayList<Double>> fMeasure ;
 	static HashMap<String,ArrayList<Double>> mcc ;
 	
-	public static void main(String[] args) throws Exception {
+	public void main(String[] args) throws Exception {
 		init();
 		
 		String inputPath = args[0];
@@ -80,7 +80,6 @@ public class OnlineWeka {
 		try {
 			writer = new BufferedWriter(new FileWriter(output));
 			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","precision","recall","fMeasure","mcc","class"));
-			
 			
 			for(int i = 0; i < runs.size(); i++) {
 				String run = runs.get(i);
@@ -137,8 +136,7 @@ public class OnlineWeka {
 			
 			String tr_arff = "run_"+run+"_cluster_"+cluster+"_tr.arff";
 			String te_arff = "run_"+run+"_cluster_"+cluster+"_te.arff";
-			System.out.println(tr_arff);
-			System.out.println(te_arff);
+			System.out.println("run_"+run+"_cluster_"+cluster);
 			System.out.println();
 			
 			if(!(fileName.contains(tr_arff) && fileName.contains(te_arff))) {
@@ -156,29 +154,48 @@ public class OnlineWeka {
 			
 			finishFileName.add(tr_arff);
 			finishFileName.add(te_arff);
+			System.out.println();
 //			break;
 		}
-		
 	}
 
 	private static void classify(String tr_arff, String te_arff, String arffFolder) {
 		try {
+			// read training set
 			DataSource source = new DataSource(arffFolder+File.separator+tr_arff);
 			Instances Data = source.getDataSet();
 			Data.setClassIndex(0);
 			System.out.println(Data.classAttribute());
 			classes.add(Data.classAttribute().toString());
 			
-			AttributeStats attStats = Data.attributeStats(0);
-			
+			//read test set
 			DataSource testSource = new DataSource(arffFolder+File.separator+te_arff);
 			Instances testData = testSource.getDataSet();
 			testData.setClassIndex(0);
-//			testData.setClassIndex(testData.numAttributes() - 1);
 			System.out.println(testData.classAttribute());
 			
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("naive","ibk"));
-					
+			//save num of buggy and clean instance
+			AttributeStats attStats = Data.attributeStats(0);
+			
+			Pattern pattern = Pattern.compile(".+\\{(\\w+),(\\w+)\\}");
+			Matcher m = pattern.matcher(Data.attribute(0).toString());
+			m.find();
+			
+			ArrayList<Integer> a = bc_num.get(m.group(1));
+			ArrayList<Integer> b = bc_num.get(m.group(2));
+			ArrayList<Integer> c = bc_num.get("total");
+			
+			int index = 10;
+			if(m.group(1).compareTo("buggy") == 0) index = 0;
+			else index = 1;
+			
+			a.add(attStats.nominalCounts[0]);
+			b.add(attStats.nominalCounts[1]);
+			c.add(attStats.totalCount);
+			System.out.println("buggy clean index : "+index);
+			
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
+			
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;
 				
@@ -203,27 +220,8 @@ public class OnlineWeka {
 				Evaluation evaluation = new Evaluation(Data);
 				
 				evaluation.evaluateModel(classifyModel, testData);
-
-				
-				//save num of buggy and clean instance
-				Pattern pattern = Pattern.compile(".+\\{(\\w+),(\\w+)\\}");
-				Matcher m = pattern.matcher(Data.attribute(0).toString());
-				m.find();
-				
-				ArrayList<Integer> a = bc_num.get(m.group(1));
-				ArrayList<Integer> b = bc_num.get(m.group(2));
-				ArrayList<Integer> c = bc_num.get("total");
-				
-				int index = 10;
-				if(m.group(1).compareTo("buggy") == 0) index = 0;
-				else index = 1;
-				
-				a.add(attStats.nominalCounts[0]);
-				b.add(attStats.nominalCounts[1]);
-				c.add(attStats.totalCount);
 				
 				//save recall fscore mcc etc...
-				System.out.println(index);
 				saveValue(precision, algorithm, evaluation.precision(index));
 				saveValue(recall, algorithm, evaluation.recall(index));
 				saveValue(fMeasure, algorithm, evaluation.fMeasure(index));
@@ -276,7 +274,6 @@ public class OnlineWeka {
 	}
 
 	private static void onlineBaseLine(ArrayList<String> fileName, String arffFolder) {
-
 		
 		if(!fileName.contains("Project_Information.txt")) System.exit(0);
 		

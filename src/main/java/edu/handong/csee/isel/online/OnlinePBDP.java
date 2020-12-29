@@ -32,11 +32,12 @@ import weka.filters.unsupervised.attribute.Remove;
 import weka.clusterers.SimpleKMeans;
 
 public class OnlinePBDP {
+	String wekaOutputPath;
 	String outputPath;
 	String projectName;
 	String referencePath;
 	boolean accumulate;
-	int run = 1;
+	int run = 0;
 	
 	ArrayList<RunDate> runDates;
 
@@ -190,8 +191,20 @@ public class OnlinePBDP {
 
 //			break;
 		}	
+		
+		//call PBDP weka directoryPath
+		wekaClassify(directoryPath,wekaOutputPath);
 
+	}
+	
+	public void wekaClassify(String path, String wekaOutputPath) throws Exception {
+		String[] WekaArgs = new String[4];
 
+		WekaArgs[0] = path;
+		WekaArgs[1] = wekaOutputPath;
+
+		OnlineWeka onlineWeka = new OnlineWeka();
+		onlineWeka.main(WekaArgs);
 	}
 
 	private HashMap<Integer, ArrayList<String>> clusteringTestProfilingDeveloper(ArrayList<File> teDeveloperProfiling) throws Exception {
@@ -564,6 +577,12 @@ public class OnlinePBDP {
 	public void setAccumulate(boolean accumulate) {
 		this.accumulate = accumulate;
 	}
+
+
+	public void setWekaOutputPath(String wekaOutputPath) {
+		this.wekaOutputPath = wekaOutputPath;
+	}
+	
 
 }
 

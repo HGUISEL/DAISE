@@ -37,7 +37,7 @@ public class OnlineMain {
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
-	//상수로 패치 사이즈 수에 따라 기존의 패치 .... enum 
+	//상수로 패치 사이즈 수에 따라 기존의 패치 .... enum
 	private final static String firstcommitTimePatternStr = "'(\\d\\d\\d\\d-\\d\\d-\\d\\d\\s\\d\\d:\\d\\d:\\d\\d)'";
 	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
 
@@ -647,7 +647,14 @@ public class OnlineMain {
 
 			//print result
 			saveResult(runDates,tr_size,tr_bugRatio,tr_run_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
-
+			
+			//weka result directory
+			File wekaDir = new File(baseSet.OutputPath() +File.separator+"Online_result");
+			String wekaDirectoryPath = wekaDir.getAbsolutePath();
+			
+			if(!wekaDir.isDirectory()) {
+				wekaDir.mkdir();
+			}
 
 			//compute PBDF
 			OnlinePBDP onlinePBDP = new OnlinePBDP();
@@ -657,6 +664,7 @@ public class OnlineMain {
 			onlinePBDP.setRunDates(runDates);
 			onlinePBDP.setReferencePath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
 			onlinePBDP.setAccumulate(accumulate);
+			onlinePBDP.setWekaOutputPath(wekaDirectoryPath);
 			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
@@ -666,6 +674,8 @@ public class OnlineMain {
 					commitHash_key_isBuggy,
 					commitHash_developer);
 
+			//call base line weka  directoryPath
+			onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath);
 
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -674,7 +684,7 @@ public class OnlineMain {
 	}
 
 	//////////////////////////////////////////////////////METHOD/////////////////////////////////////////////////////////////////////////////////////////////
-
+	
 	private String[] extratOnlineargs(String arffPath, String directoryPath) {
 
 		String[] extratPDPargs = new String[3];
@@ -989,6 +999,16 @@ public class OnlineMain {
 			}else {
 				baseSet.setOutputPath(outputPath);
 			}
+			
+			String wekaOutputPath = cmd.getOptionValue("w");
+			if(wekaOutputPath.endsWith(File.separator)) {
+				wekaOutputPath = wekaOutputPath.substring(0, wekaOutputPath.lastIndexOf(File.separator));
+				baseSet.setWekaOutputPath(wekaOutputPath);
+			}else {
+				baseSet.setWekaOutputPath(wekaOutputPath);
+			}
+			
+			
 
 			if(cmd.hasOption("s") && cmd.hasOption("e")) {
 				baseSet.setStartDate(cmd.getOptionValue("s"));
@@ -1051,6 +1071,13 @@ public class OnlineMain {
 				.argName("path")
 				.required()
 				.build());
+		
+		options.addOption(Option.builder("w").longOpt("wekaOutput")
+				.desc("weka classify output path. Don't use double quotation marks")
+				.hasArg()
+				.argName("path")
+				.required()
+				.build());
 		//options
 		options.addOption(Option.builder("s").longOpt("startdate")
 				.desc("Start date for collecting training data. Format: \"yyyy-MM-dd HH:mm:ss\"")
@@ -1106,6 +1133,7 @@ public class OnlineMain {
 
 
 class BaseSetting {
+	String wekaOutputPath;
 	String outputPath;
 	String projectName;
 	String referenceFolderPath;
@@ -1123,6 +1151,7 @@ class BaseSetting {
 	int totalChange;
 
 	BaseSetting(){
+		wekaOutputPath = null;
 		projectName = null;
 		referenceFolderPath = null;
 		outputPath = null;
@@ -1158,6 +1187,12 @@ class BaseSetting {
 
 	}
 
+	public String WekaOutputPath() {
+		return wekaOutputPath;
+	}
+	public void setWekaOutputPath(String wekaOutputPath) {
+		this.wekaOutputPath = wekaOutputPath;
+	}
 	public String OutputPath() {
 		return outputPath;
 	}
