@@ -194,7 +194,7 @@ public class OnlineWeka {
 			c.add(attStats.totalCount);
 			System.out.println("buggy clean index : "+index);
 			
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk","logi"));
 			
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;
