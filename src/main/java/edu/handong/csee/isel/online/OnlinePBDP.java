@@ -48,6 +48,8 @@ public class OnlinePBDP {
 	private Pattern firstDeveloperIDPattern ;
 	private String firstcommitTimePatternStr ;
 	private Pattern firstcommitTimePattern ;
+	private String developerIDPatternStr ;
+	private Pattern developerIDPattern ;
 	
 	HashMap<String, ArrayList<String>> accum_developerID_commitHash; 
 	
@@ -56,6 +58,9 @@ public class OnlinePBDP {
 		this.firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
 		this.firstcommitTimePatternStr = ".+/Developer_(.+)_Online.csv";
 		this.firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
+		this.developerIDPatternStr = "((\\?)|' (.+)'),(.+)";
+		this.developerIDPattern = Pattern.compile(developerIDPatternStr);
+		
 		minCommit = 0;
 		numOfCluster = 0;
 		accum_developerID_commitHash = new HashMap<>();
@@ -155,9 +160,7 @@ public class OnlinePBDP {
 					minCommit++;
 					BeforeNumOfDeveloper = trClusteringDeveloperID.size();
 				}
-				break;
 			}
-			System.exit(0);
 			System.out.println("Final minCommit of tr : "+minCommit);
 			System.out.println("Final numOfCluster of tr : "+numOfCluster);
 
@@ -219,9 +222,11 @@ public class OnlinePBDP {
 			Instances newData = Filter.useFilter(data, removeFilter);
 
 			eval.evaluateClusterer(newData);
-			//	        System.out.println("# of clusters: " + eval.getNumClusters());
-			int cluster = countNumberOfCluster(eval.clusterResultsToString());
-			System.out.println("developerID : Cluster = "+developerID+" : "+cluster);
+			double[] assignments = eval.getClusterAssignments();
+			
+			if(assignments.length > 1) System.out.println("_______________________Emergency_________________");
+			int cluster = (int)assignments[0];
+			
 			ArrayList<String> teDeveloperList;
 			if(teCluster_developerID.containsKey(cluster)) {
 				teDeveloperList = teCluster_developerID.get(cluster);
@@ -234,21 +239,6 @@ public class OnlinePBDP {
 		}
 
 		return teCluster_developerID;
-	}
-
-	private int countNumberOfCluster(String clustereddata) {
-		String[] lines = clustereddata.split("\n");
-		int numOfCluster = 0;
-		for(int i = lines.length-1; i >= 0; i--) {
-			if(lines[i].endsWith("(100%)")) {
-				Matcher m = firstDeveloperIDPattern.matcher(lines[i]);
-				m.find();
-				numOfCluster = Integer.parseInt(m.group(1));
-				break;
-			}
-		}
-
-		return numOfCluster;
 	}
 
 	private ArrayList<File> collectingTestDeveloperProfilingMetrics(ArrayList<String> teProfilingMetadatacsvPath) throws Exception{
@@ -338,7 +328,7 @@ public class OnlinePBDP {
 
 		//apply EM clustering algorithm
 		EM em = new EM(); //option
-		em.setNumClusters(3); //option
+		em.setNumClusters(2); //option
 		em.buildClusterer(newData);
 		
 //		SimpleKMeans sk = new SimpleKMeans();
@@ -348,17 +338,15 @@ public class OnlinePBDP {
 //		sk.buildClusterer(newData);
 		
 		///save developer cluster!
-		String developerIDPatternStr = "' (.+)',(.+)";
-		Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
-
 		ArrayList<String> developerNameCSV = new ArrayList<String>(); //developer ID
 		ArrayList<String> developerInstanceCSV = new ArrayList<String>(); //All of developer instance 
 
 		for(int i = 0; i < data.numInstances(); i++) {
 			Matcher m = developerIDPattern.matcher(data.instance(i).toString());
 			while(m.find()) {
-				developerNameCSV.add(m.group(1));
-				developerInstanceCSV.add(m.group(2));
+				if(m.group(3) == null) developerNameCSV.add(m.group(1));
+				else developerNameCSV.add(m.group(3));
+				developerInstanceCSV.add(m.group(4));
 			}
 		}
 		
@@ -366,16 +354,17 @@ public class OnlinePBDP {
 		eval.setClusterer(em);
 		eval.evaluateClusterer(newData);
 		setEval(eval);
-		System.out.println("------------------------------NUM cluste --- "+eval.getNumClusters());
+		System.out.println("------------------------------NUM cluster --- "+eval.getNumClusters());
 		
 		double[] assignments = eval.getClusterAssignments();
 		
 		for(int i = 0; i < newData.size(); i++) {
-			if(newData.instance(i).toString().compareTo(developerInstanceCSV.get(i)) != 0) {
-				System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Different!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			int index = findIndex(newData.instance(i).toString(), developerInstanceCSV);
+			int cluster = (int)assignments[i];
+			if(index == 1000) {
+				System.out.println(data.instance(i));
 			}
-			int cluster = (int)assignments[i] + 1;
-			String developerID = developerNameCSV.get(i);
+			String developerID = developerNameCSV.get(index);
 			ArrayList<String> developerList;
 			
 			if(cluster_developer.containsKey(cluster)) {
@@ -386,10 +375,23 @@ public class OnlinePBDP {
 				developerList.add(developerID);
 				cluster_developer.put(cluster, developerList);
 			}
+			
+			developerInstanceCSV.remove(index);
+			developerNameCSV.remove(index);
 		}
 
 		return cluster_developer;
 	}
+
+	private int findIndex(String instance, ArrayList<String> developerInstanceCSV) {
+		for(int i = 0; i < developerInstanceCSV.size(); i++) {
+			if(developerInstanceCSV.get(i).equals(instance)) {
+				return i;
+			}
+		}
+		return 1000;
+	}
+
 
 	private ArrayList<String> saveDeveloperCommitHash(ArrayList<String> clusteringDeveloperID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs) {
