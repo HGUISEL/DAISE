@@ -37,6 +37,7 @@ public class OnlineMain {
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
+	int defaultCluster;
 	//상수로 패치 사이즈 수에 따라 기존의 패치 .... enum
 	private final static String firstcommitTimePatternStr = "'(\\d\\d\\d\\d-\\d\\d-\\d\\d\\s\\d\\d:\\d\\d:\\d\\d)'";
 	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
@@ -666,6 +667,7 @@ public class OnlineMain {
 			onlinePBDP.setAccumulate(accumulate);
 			onlinePBDP.setWekaOutputPath(wekaDirectoryPath);
 			onlinePBDP.setDefaultLabel(defaultLabel);
+			onlinePBDP.setDefaultCluster(defaultCluster);
 			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
@@ -1008,8 +1010,10 @@ public class OnlineMain {
 			}else {
 				baseSet.setWekaOutputPath(wekaOutputPath);
 			}
-
-
+			
+			if(cmd.hasOption("c")){
+				defaultCluster = Integer.parseInt(cmd.getOptionValue("c"));
+			}
 
 			if(cmd.hasOption("s") && cmd.hasOption("e")) {
 				baseSet.setStartDate(cmd.getOptionValue("s"));
@@ -1098,16 +1102,16 @@ public class OnlineMain {
 				.argName("Update date")
 				.build());
 
-		options.addOption(Option.builder("u").longOpt("updatedays")
-				.desc("update date for collecting training data. Format: days")
-				.hasArg()
-				.argName("Update date")
-				.build());
-
 		options.addOption(Option.builder("g").longOpt("gapdays")
 				.desc("gap date for collecting training data. Format: days")
 				.hasArg()
 				.argName("Gap date")
+				.build());
+		
+		options.addOption(Option.builder("c").longOpt("cluster")
+				.desc("The number of cluster. Format: int")
+				.hasArg()
+				.argName("cluster")
 				.build());
 
 		options.addOption(Option.builder("a").longOpt("isAccumulate")

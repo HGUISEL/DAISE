@@ -41,6 +41,7 @@ public class OnlinePBDP {
 	int numOfCluster; //option
 	ClusterEvaluation eval;
 	String defaultLabel;
+	int defaultCluster;
 
 	private String firstcommitTimePatternStr ;
 	private Pattern firstcommitTimePattern ;
@@ -59,6 +60,7 @@ public class OnlinePBDP {
 		numOfCluster = 0;
 		accum_developerID_commitHash = new HashMap<>();
 		accumulate = false;
+		defaultCluster = 0;
 	}
 
 
@@ -392,7 +394,9 @@ public class OnlinePBDP {
 
 		//apply EM clustering algorithm
 		EM em = new EM(); //option
-		em.setNumClusters(2); //option
+		if(defaultCluster != 0) {
+			em.setNumClusters(defaultCluster); //option
+		}
 		em.buildClusterer(newData);
 
 		//		SimpleKMeans sk = new SimpleKMeans();
@@ -612,10 +616,6 @@ public class OnlinePBDP {
 		this.minCommit = minCommit;
 	}
 
-	public void setNumOfCluster(int numOfCluster) {
-		this.numOfCluster = numOfCluster;
-	}
-
 	public ClusterEvaluation getEval() {
 		return eval;
 	}
@@ -639,6 +639,14 @@ public class OnlinePBDP {
 		this.defaultLabel = defaultLabel;
 	}
 
+
+	public void setDefaultCluster(int defaultCluster) {
+		this.defaultCluster = defaultCluster;
+	}
+	
+	
+	
+	
 }
 
 class RunningData{
