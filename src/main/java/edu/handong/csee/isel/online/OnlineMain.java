@@ -665,6 +665,7 @@ public class OnlineMain {
 			onlinePBDP.setReferencePath(baseSet.ReferenceFolderPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
 			onlinePBDP.setAccumulate(accumulate);
 			onlinePBDP.setWekaOutputPath(wekaDirectoryPath);
+			onlinePBDP.setDefaultLabel(defaultLabel);
 			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
