@@ -40,6 +40,7 @@ public class OnlinePBDP {
 	int minCommit;//mincommit 30 to 100 - option
 	int numOfCluster; //option
 	ClusterEvaluation eval;
+	String defaultLabel;
 
 	private String firstcommitTimePatternStr ;
 	private Pattern firstcommitTimePattern ;
@@ -158,7 +159,7 @@ public class OnlinePBDP {
 			System.out.println("Final numOfCluster of tr : "+numOfCluster);
 
 			//make tr arff file in each clustering
-			makeArffFileInEachClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, "tr");
+			makeArffFileInEachTrClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, key_fixTime, commitHash_key_isBuggy, teE);
 			System.out.println();
 			System.out.println("test start");
 
@@ -177,7 +178,7 @@ public class OnlinePBDP {
 			HashMap<Integer,ArrayList<String>> teCluster_developerID = clusteringTestProfilingDeveloper(teDeveloperProfiling);
 
 			//make te arff file in each clustering
-			makeArffFileInEachClustering(teCluster_developerID, te_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, "te");
+			makeArffFileInEachTestClustering(teCluster_developerID, te_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run);
 
 			run++;
 
@@ -273,13 +274,73 @@ public class OnlinePBDP {
 		}
 		return teProfilingMetadatacsvPath;
 	}
-
-	private void makeArffFileInEachClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
-			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run, String string) throws Exception {
+	
+	private void makeArffFileInEachTrClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
+			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run, TreeMap<String, String> key_fixTime, HashMap<String, HashMap<String, Boolean>> commitHash_key_isBuggy, String teE) throws Exception {
 
 
 		for(int cluster : cluster_developerID.keySet()) {
-			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_"+string+".arff");
+			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_tr.arff");
+			// ./run_1_cluster_2_tr.arff
+			StringBuffer newContentBuf = new StringBuffer();
+			ArrayList<String> developerIDs = cluster_developerID.get(cluster);
+
+			//write attribute
+			for (String line : attributeLineList) {
+				if(line.startsWith("@attribute meta_data-commitTime")) continue;
+				if(line.startsWith("@attribute Key {")) continue;
+				newContentBuf.append(line + "\n");
+			}
+
+			//write data
+			for(String developerID : tr_developerID_commitHashs.keySet()) {
+				if(developerIDs.contains(developerID)) {
+					ArrayList<String> commitHashs = tr_developerID_commitHashs.get(developerID);
+					for(String commitHash : commitHashs) {
+						for(String key : commitHash_key_data.get(commitHash).keySet()) {
+							boolean isBuggy = commitHash_key_isBuggy.get(commitHash).get(key);
+							String fixTime = key_fixTime.get(key);
+							String data = commitHash_key_data.get(commitHash).get(key);
+							
+							if(isBuggy == true) {
+								if(teE.compareTo(fixTime)<=0) { // fixTime > teE // run의 기간 보다 후에 결함이 수정될경우 label = clean
+
+									//make data to clean 
+									if(defaultLabel.compareTo("buggy") == 0){
+										if(data.startsWith("{0 buggy,")) {
+											data = "{"+data.substring(data.indexOf(",")+1, data.length());
+										}else {
+											System.out.println("큰일!!!");
+										}
+									}else if(defaultLabel.compareTo("clean") == 0) {
+										if(!data.startsWith("{0 clean,")) {
+											data = data.substring(data.indexOf("{")+1, data.length());
+											data = "{0 clean," + data;
+										}else {
+											System.out.println("큰일!!!");
+										}
+									}
+								}
+							}
+							
+							newContentBuf.append(data + "\n");
+						}
+					}
+				}
+			}
+
+			FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+
+		}
+
+	}
+
+	private void makeArffFileInEachTestClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
+			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run) throws Exception {
+
+
+		for(int cluster : cluster_developerID.keySet()) {
+			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_te.arff");
 			// ./run_1_cluster_2_tr.arff
 			StringBuffer newContentBuf = new StringBuffer();
 			ArrayList<String> developerIDs = cluster_developerID.get(cluster);
@@ -575,6 +636,10 @@ public class OnlinePBDP {
 		this.wekaOutputPath = wekaOutputPath;
 	}
 
+
+	public void setDefaultLabel(String defaultLabel) {
+		this.defaultLabel = defaultLabel;
+	}
 
 }
 
