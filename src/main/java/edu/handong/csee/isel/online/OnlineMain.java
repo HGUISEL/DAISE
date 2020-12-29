@@ -662,7 +662,7 @@ public class OnlineMain {
 			onlinePBDP.setOutputPath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP"+File.separator);
 			onlinePBDP.setProjectName(baseSet.ProjectName());
 			onlinePBDP.setRunDates(runDates);
-			onlinePBDP.setReferencePath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
+			onlinePBDP.setReferencePath(baseSet.ReferenceFolderPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
 			onlinePBDP.setAccumulate(accumulate);
 			onlinePBDP.setWekaOutputPath(wekaDirectoryPath);
 			//			call compute PBDP
