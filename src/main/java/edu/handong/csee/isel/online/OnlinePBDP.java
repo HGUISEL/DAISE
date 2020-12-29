@@ -121,9 +121,7 @@ public class OnlinePBDP {
 					trClusteringDeveloperID.addAll(devID);
 				}
 				if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
-					if(minCommit == 50){
-						break;
-					}else {
+					if(minCommit < 50){
 						minCommit++;
 						continue;
 					}
