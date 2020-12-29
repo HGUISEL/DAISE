@@ -21,15 +21,11 @@ import org.apache.commons.io.FileUtils;
 import edu.handong.csee.isel.MainDAISE;
 import edu.handong.csee.isel.pdp.Metrics;
 import weka.clusterers.ClusterEvaluation;
-import weka.clusterers.Clusterer;
 import weka.clusterers.EM;
-import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
-import weka.core.pmml.jaxbbindings.Cluster;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
-import weka.clusterers.SimpleKMeans;
 
 public class OnlinePBDP {
 	String wekaOutputPath;
@@ -38,30 +34,26 @@ public class OnlinePBDP {
 	String referencePath;
 	boolean accumulate;
 	int run = 0;
-	
+
 	ArrayList<RunDate> runDates;
 
 	int minCommit;//mincommit 30 to 100 - option
 	int numOfCluster; //option
 	ClusterEvaluation eval;
 
-	private String firstDeveloperIDPatternStr ; 
-	private Pattern firstDeveloperIDPattern ;
 	private String firstcommitTimePatternStr ;
 	private Pattern firstcommitTimePattern ;
 	private String developerIDPatternStr ;
 	private Pattern developerIDPattern ;
-	
+
 	HashMap<String, ArrayList<String>> accum_developerID_commitHash; 
-	
+
 	OnlinePBDP(){
-		this.firstDeveloperIDPatternStr = "\\d+\\s+(\\d+)"; 
-		this.firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
 		this.firstcommitTimePatternStr = ".+/Developer_(.+)_Online.csv";
 		this.firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
 		this.developerIDPatternStr = "((\\?)|' (.+)'),(.+)";
 		this.developerIDPattern = Pattern.compile(developerIDPatternStr);
-		
+
 		minCommit = 0;
 		numOfCluster = 0;
 		accum_developerID_commitHash = new HashMap<>();
@@ -85,15 +77,15 @@ public class OnlinePBDP {
 		File PBDPdir = new File(outputPath);
 		String directoryPath = PBDPdir.getAbsolutePath();
 		PBDPdir.mkdir();
-		
+
 		int BeforeNumOfDeveloper = 0;
 
 		for(RunDate runDate : runDates) {
-			
+
 			numOfCluster = 0;
 			minCommit = 10;
 			BeforeNumOfDeveloper = 0;
-			
+
 			System.out.println("------------------Run = "+ run + " ------------------");
 
 			//cal the number of developer commit in training set
@@ -136,7 +128,7 @@ public class OnlinePBDP {
 						continue;
 					}
 				}
-//				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
+				//				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
 
 				//count numOfCluster
 				//0. save only tr commitHash (top Devloper)
@@ -189,14 +181,14 @@ public class OnlinePBDP {
 
 			run++;
 
-//			break;
+			//			break;
 		}	
-		
+
 		//call PBDP weka directoryPath
 		wekaClassify(directoryPath,wekaOutputPath);
 
 	}
-	
+
 	public void wekaClassify(String path, String wekaOutputPath) throws Exception {
 		String[] WekaArgs = new String[4];
 
@@ -236,10 +228,10 @@ public class OnlinePBDP {
 
 			eval.evaluateClusterer(newData);
 			double[] assignments = eval.getClusterAssignments();
-			
+
 			if(assignments.length > 1) System.out.println("_______________________Emergency_________________");
 			int cluster = (int)assignments[0];
-			
+
 			ArrayList<String> teDeveloperList;
 			if(teCluster_developerID.containsKey(cluster)) {
 				teDeveloperList = teCluster_developerID.get(cluster);
@@ -331,7 +323,7 @@ public class OnlinePBDP {
 		for (int i = 0, j = 1; i < data.numAttributes()-1; i++,j++) {
 			toSelect[i] = j;
 		}
-		
+
 		//delete developer ID column of CSV file
 		Remove removeFilter = new Remove();
 		removeFilter.setAttributeIndicesArray(toSelect);
@@ -343,13 +335,13 @@ public class OnlinePBDP {
 		EM em = new EM(); //option
 		em.setNumClusters(2); //option
 		em.buildClusterer(newData);
-		
-//		SimpleKMeans sk = new SimpleKMeans();
-//		sk.setSeed(10);
-//		sk.setPreserveInstancesOrder(true);
-//		sk.setNumClusters(3);
-//		sk.buildClusterer(newData);
-		
+
+		//		SimpleKMeans sk = new SimpleKMeans();
+		//		sk.setSeed(10);
+		//		sk.setPreserveInstancesOrder(true);
+		//		sk.setNumClusters(3);
+		//		sk.buildClusterer(newData);
+
 		///save developer cluster!
 		ArrayList<String> developerNameCSV = new ArrayList<String>(); //developer ID
 		ArrayList<String> developerInstanceCSV = new ArrayList<String>(); //All of developer instance 
@@ -362,15 +354,15 @@ public class OnlinePBDP {
 				developerInstanceCSV.add(m.group(4));
 			}
 		}
-		
+
 		ClusterEvaluation eval = new ClusterEvaluation();
 		eval.setClusterer(em);
 		eval.evaluateClusterer(newData);
 		setEval(eval);
 		System.out.println("------------------------------NUM cluster --- "+eval.getNumClusters());
-		
+
 		double[] assignments = eval.getClusterAssignments();
-		
+
 		for(int i = 0; i < newData.size(); i++) {
 			int index = findIndex(newData.instance(i).toString(), developerInstanceCSV);
 			int cluster = (int)assignments[i];
@@ -379,7 +371,7 @@ public class OnlinePBDP {
 			}
 			String developerID = developerNameCSV.get(index);
 			ArrayList<String> developerList;
-			
+
 			if(cluster_developer.containsKey(cluster)) {
 				developerList = cluster_developer.get(cluster);
 				developerList.add(developerID);
@@ -388,7 +380,7 @@ public class OnlinePBDP {
 				developerList.add(developerID);
 				cluster_developer.put(cluster, developerList);
 			}
-			
+
 			developerInstanceCSV.remove(index);
 			developerNameCSV.remove(index);
 		}
@@ -468,9 +460,9 @@ public class OnlinePBDP {
 			TreeSet<String> commitHashs = commitTime_commitHash.get(commitTime);
 			for(String commitHash : commitHashs) {
 				String developerID = commitHash_developer.get(commitHash);
-				
+
 				ArrayList<String> dev_commitHash;
-				
+
 				if(accumulate == false || (string.compareTo("tr")==0) ) {
 					if(tr_developerID_commitHashs.containsKey(developerID)) {
 						dev_commitHash = tr_developerID_commitHashs.get(developerID);
@@ -488,7 +480,7 @@ public class OnlinePBDP {
 						if(numOfCommit > 500) {
 							dev_commitHash.remove(0);
 						}
-//						System.out.println("dev_commitHash = "+developerID+" : "+dev_commitHash.size());
+						//						System.out.println("dev_commitHash = "+developerID+" : "+dev_commitHash.size());
 						accum_developerID_commitHash.put(developerID, dev_commitHash);
 					}else {
 						dev_commitHash = new ArrayList<String>();
@@ -496,7 +488,7 @@ public class OnlinePBDP {
 						accum_developerID_commitHash.put(developerID, dev_commitHash);
 					}
 				}
-				
+
 			}
 		}
 		if(accumulate == false || string.compareTo("tr")==0)
@@ -582,7 +574,7 @@ public class OnlinePBDP {
 	public void setWekaOutputPath(String wekaOutputPath) {
 		this.wekaOutputPath = wekaOutputPath;
 	}
-	
+
 
 }
 
@@ -594,17 +586,17 @@ class RunningData{
 	int trCommit;
 	int trCluster;
 	int trDeveloper;
-	
+
 	int teCommit;
 	int teDeveloper;
-	
-	
+
+
 	RunningData(){
 		trS = null;
 		trE_gapS = null;
 		gapE_teS = null;
 		teE = null;
 	}
-	
-	
+
+
 }

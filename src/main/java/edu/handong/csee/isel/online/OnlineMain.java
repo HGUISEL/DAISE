@@ -647,11 +647,11 @@ public class OnlineMain {
 
 			//print result
 			saveResult(runDates,tr_size,tr_bugRatio,tr_run_bugRatio,te_size,te_bugRatio,directoryPath,run,baseSet);
-			
+
 			//weka result directory
 			File wekaDir = new File(baseSet.OutputPath() +File.separator+"Online_result");
 			String wekaDirectoryPath = wekaDir.getAbsolutePath();
-			
+
 			if(!wekaDir.isDirectory()) {
 				wekaDir.mkdir();
 			}
@@ -684,7 +684,7 @@ public class OnlineMain {
 	}
 
 	//////////////////////////////////////////////////////METHOD/////////////////////////////////////////////////////////////////////////////////////////////
-	
+
 	private String[] extratOnlineargs(String arffPath, String directoryPath) {
 
 		String[] extratPDPargs = new String[3];
@@ -999,7 +999,7 @@ public class OnlineMain {
 			}else {
 				baseSet.setOutputPath(outputPath);
 			}
-			
+
 			String wekaOutputPath = cmd.getOptionValue("w");
 			if(wekaOutputPath.endsWith(File.separator)) {
 				wekaOutputPath = wekaOutputPath.substring(0, wekaOutputPath.lastIndexOf(File.separator));
@@ -1007,8 +1007,8 @@ public class OnlineMain {
 			}else {
 				baseSet.setWekaOutputPath(wekaOutputPath);
 			}
-			
-			
+
+
 
 			if(cmd.hasOption("s") && cmd.hasOption("e")) {
 				baseSet.setStartDate(cmd.getOptionValue("s"));
@@ -1071,7 +1071,7 @@ public class OnlineMain {
 				.argName("path")
 				.required()
 				.build());
-		
+
 		options.addOption(Option.builder("w").longOpt("wekaOutput")
 				.desc("weka classify output path. Don't use double quotation marks")
 				.hasArg()
@@ -1090,7 +1090,7 @@ public class OnlineMain {
 				.hasArg()
 				.argName("End date")
 				.build());
-		
+
 		options.addOption(Option.builder("u").longOpt("updatedays")
 				.desc("update date for collecting training data. Format: days")
 				.hasArg()
@@ -1108,7 +1108,7 @@ public class OnlineMain {
 				.hasArg()
 				.argName("Gap date")
 				.build());
-		
+
 		options.addOption(Option.builder("a").longOpt("isAccumulate")
 				.desc("Are the developers of the test set accumulated?.")
 				.argName("accumulate?")
