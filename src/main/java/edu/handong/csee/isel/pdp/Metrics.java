@@ -27,7 +27,7 @@ public class Metrics {
 	String commitTime;
 	String Key;
 	
-	Metrics(CSVRecord record){
+	public Metrics(CSVRecord record){
 		this.isBuggy = record.get("isBuggy");
 		this.Modify_Lines = record.get("Modify Lines");
 		this.Add_Lines = record.get("Add Lines");
@@ -48,7 +48,7 @@ public class Metrics {
 		this.REXP = record.get("REXP");
 		this.SEXP = record.get("SEXP");
 		this.LT = record.get("LT");
-		this.commitTime = record.get("commitTime");
+		this.commitTime = record.get("meta_data-commitTime");
 		this.Key = record.get("Key");
 	}
 
