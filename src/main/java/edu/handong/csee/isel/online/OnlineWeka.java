@@ -34,10 +34,15 @@ public class OnlineWeka {
 	static ArrayList<String> clusters ;
 	static ArrayList<String> classes ;
 	static HashMap<String,ArrayList<Integer>> bc_num  ;
-	static HashMap<String,ArrayList<Double>> precision ;
-	static HashMap<String,ArrayList<Double>> recall ;
-	static HashMap<String,ArrayList<Double>> fMeasure ;
-	static HashMap<String,ArrayList<Double>> mcc ;
+//	static HashMap<String,ArrayList<Double>> precision ;
+//	static HashMap<String,ArrayList<Double>> recall ;
+//	static HashMap<String,ArrayList<Double>> fMeasure ;
+//	static HashMap<String,ArrayList<Double>> mcc ;
+	
+	static HashMap<String,ArrayList<Double>> numTruePositives ;
+	static HashMap<String,ArrayList<Double>> numFalseNegatives ;
+	static HashMap<String,ArrayList<Double>> numFalsePositives ;
+	static HashMap<String,ArrayList<Double>> numTrueNegatives ;
 
 	public void main(String[] args) throws Exception {
 		init();
@@ -68,7 +73,6 @@ public class OnlineWeka {
 
 		System.out.println("Finish "+projectname);
 	}
-
 	private static void makeCSVFile(String output) {
 
 		BufferedWriter writer;
@@ -85,12 +89,12 @@ public class OnlineWeka {
 				int clean = bc_num.get("clean").get(i);
 				float ratio = ((float)buggy/(float)total) * 100;
 
-				for(String algorithm : precision.keySet()) {
-					double p = precision.get(algorithm).get(i);
-					double r = recall.get(algorithm).get(i);
-					double f = fMeasure.get(algorithm).get(i);
-					double m = mcc.get(algorithm).get(i);
-					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,ratio,p,r,f,m,Class);
+				for(String algorithm : numTruePositives.keySet()) {
+					double TP = numTruePositives.get(algorithm).get(i);
+					double FN = numFalseNegatives.get(algorithm).get(i);
+					double FP = numFalsePositives.get(algorithm).get(i);
+					double TN = numTrueNegatives.get(algorithm).get(i);
+					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,ratio,TP,FN,FP,TN,Class);
 				}
 			}
 			csvPrinter.close();
@@ -107,10 +111,10 @@ public class OnlineWeka {
 		bc_num.put("clean", new ArrayList<Integer>());
 		bc_num.put("total", new ArrayList<Integer>());
 
-		precision = new HashMap<>();
-		recall = new HashMap<>();
-		mcc = new HashMap<>();
-		fMeasure = new HashMap<>();
+		numTruePositives = new HashMap<>();
+		numFalseNegatives = new HashMap<>();
+		numFalsePositives = new HashMap<>();
+		numTrueNegatives = new HashMap<>();
 
 		runs = new ArrayList<>();
 		clusters = new ArrayList<>();
@@ -218,10 +222,16 @@ public class OnlineWeka {
 				evaluation.evaluateModel(classifyModel, testData);
 
 				//save recall fscore mcc etc...
-				saveValue(precision, algorithm, evaluation.precision(index));
-				saveValue(recall, algorithm, evaluation.recall(index));
-				saveValue(fMeasure, algorithm, evaluation.fMeasure(index));
-				saveValue(mcc, algorithm, evaluation.matthewsCorrelationCoefficient(index));
+//				saveValue(precision, algorithm, evaluation.precision(index));
+//				saveValue(recall, algorithm, evaluation.recall(index));
+//				saveValue(fMeasure, algorithm, evaluation.fMeasure(index));
+//				saveValue(mcc, algorithm, evaluation.matthewsCorrelationCoefficient(index));
+				
+				//save false,,.
+				saveValue(numTruePositives, algorithm, evaluation.numTruePositives(index));
+				saveValue(numFalseNegatives, algorithm, evaluation.numFalseNegatives(index));
+				saveValue(numFalsePositives, algorithm, evaluation.numFalsePositives(index));
+				saveValue(numTrueNegatives, algorithm, evaluation.numTrueNegatives(index));
 
 				//				
 				//				String detail = evaluation.toClassDetailsString();
