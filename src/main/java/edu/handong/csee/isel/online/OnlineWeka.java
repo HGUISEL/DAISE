@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,10 +35,6 @@ public class OnlineWeka {
 	static ArrayList<String> clusters ;
 	static ArrayList<String> classes ;
 	static HashMap<String,ArrayList<Integer>> bc_num  ;
-//	static HashMap<String,ArrayList<Double>> precision ;
-//	static HashMap<String,ArrayList<Double>> recall ;
-//	static HashMap<String,ArrayList<Double>> fMeasure ;
-//	static HashMap<String,ArrayList<Double>> mcc ;
 	
 	static HashMap<String,ArrayList<Double>> numTruePositives ;
 	static HashMap<String,ArrayList<Double>> numFalseNegatives ;
@@ -56,7 +53,7 @@ public class OnlineWeka {
 		m.find();
 		String projectname = m.group(1);
 
-		String output = args[1] +File.separator + projectname+"_result_online.csv";
+		String output = args[1] +File.separator + projectname+"_result_online";
 
 		ArrayList<String> fileName = new ArrayList<>();
 		for(File file : fileList) {
@@ -74,11 +71,14 @@ public class OnlineWeka {
 		System.out.println("Finish "+projectname);
 	}
 	private static void makeCSVFile(String output) {
+		HashMap<String,Run> runEvaluationValue = new HashMap<>();
 
-		BufferedWriter writer;
+		BufferedWriter confusionMatrixWriter;
+		BufferedWriter evaluationValueWriter;
+		
 		try {
-			writer = new BufferedWriter(new FileWriter(output));
-			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","Ratio(%)","precision","recall","fMeasure","mcc","class"));
+			confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_CM.csv"));
+			CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","Ratio(%)","TP","FN","FP","TN","class"));
 
 			for(int i = 0; i < runs.size(); i++) {
 				String run = runs.get(i);
@@ -88,23 +88,97 @@ public class OnlineWeka {
 				int buggy = bc_num.get("buggy").get(i);
 				int clean = bc_num.get("clean").get(i);
 				float ratio = ((float)buggy/(float)total) * 100;
-
-				for(String algorithm : numTruePositives.keySet()) {
-					double TP = numTruePositives.get(algorithm).get(i);
-					double FN = numFalseNegatives.get(algorithm).get(i);
-					double FP = numFalsePositives.get(algorithm).get(i);
-					double TN = numTrueNegatives.get(algorithm).get(i);
-					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,ratio,TP,FN,FP,TN,Class);
+				double TP = 0;
+				double FN = 0;
+				double FP = 0;
+				double TN = 0;
+				
+				Run runEV;
+				if(runEvaluationValue.containsKey(run)) {
+					runEV = runEvaluationValue.get(run);
+				}else {
+					runEV = new Run();
 				}
+				
+				for(String algorithm : numTruePositives.keySet()) {
+					 TP = numTruePositives.get(algorithm).get(i);
+					 FN = numFalseNegatives.get(algorithm).get(i);
+					 FP = numFalsePositives.get(algorithm).get(i);
+					 TN = numTrueNegatives.get(algorithm).get(i);
+					 
+					confusionMatrixcsvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,ratio,TP,FN,FP,TN,Class);
+					
+					runEV.setTP(algorithm, TP, cluster);
+					runEV.setFN(algorithm, FN, cluster);
+					runEV.setFP(algorithm, FP, cluster);
+					runEV.setBuggy(algorithm, buggy, cluster);
+					runEV.setClean(algorithm, clean, cluster);
+				}
+				runEvaluationValue.put(run, runEV);
 			}
-			csvPrinter.close();
-			writer.close();
+			confusionMatrixcsvPrinter.close();
+			confusionMatrixWriter.close();
+			
+
+			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV.csv"));
+			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","total","buggy","clean","Ratio(%)","precision","recall","fMeasure"));			
+			double TPS = 0;
+			double FNS = 0;
+			double FPS = 0;
+			int buggys = 0;
+			int cleans = 0;
+			
+			for(String run : runEvaluationValue.keySet()) {
+				Run runEV = runEvaluationValue.get(run);
+				
+				
+				for(String algorithm : runEV.getTP().keySet()) {
+					double TP = sum(runEV.getTP().get(algorithm));
+					double FN = sum(runEV.getFN().get(algorithm));
+					double FP = sum(runEV.getFP().get(algorithm));
+					int buggy = (int)sum(runEV.getBuggy().get(algorithm));
+					int clean = (int)sum(runEV.getClean().get(algorithm));
+					int total = buggy + clean;
+					float ratio = ((float)buggy/(float)total) * 100;
+					
+					double precision = TP/(TP + FP);
+					double recall = TP/(TP + FN);
+					double fMeasure = ((precision * recall)/(precision + recall))*2;
+					
+					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,ratio,precision,recall,fMeasure);
+					TPS += TP;
+					FNS += FN;
+					FPS += FP;
+					buggys += buggy;
+					cleans += cleans;
+				}
+			}	
+			
+			int total = buggys + cleans;
+			float ratio = ((float)buggys/(float)total) * 100;
+			double precision = TPS/(TPS + FPS);
+			double recall = TPS/(TPS + FNS);
+			double fMeasure = ((precision * recall)/(precision + recall))*2;
+			
+			evaluationValuePrinter.printRecord("None","Total_Run",total,buggys,cleans,ratio,precision,recall,fMeasure);
+
+			evaluationValuePrinter.close();
+			evaluationValueWriter.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 	}
 
+	private static double sum(ArrayList<Double> arrayList) {
+		double sum = 0;
+		 
+		for(double i : arrayList) {
+			sum += i;
+		}
+
+		return sum;
+	}
 	private static void init() {
 		bc_num = new HashMap<>();
 		bc_num.put("buggy", new ArrayList<Integer>());
@@ -221,12 +295,6 @@ public class OnlineWeka {
 
 				evaluation.evaluateModel(classifyModel, testData);
 
-				//save recall fscore mcc etc...
-//				saveValue(precision, algorithm, evaluation.precision(index));
-//				saveValue(recall, algorithm, evaluation.recall(index));
-//				saveValue(fMeasure, algorithm, evaluation.fMeasure(index));
-//				saveValue(mcc, algorithm, evaluation.matthewsCorrelationCoefficient(index));
-				
 				//save false,,.
 				saveValue(numTruePositives, algorithm, evaluation.numTruePositives(index));
 				saveValue(numFalseNegatives, algorithm, evaluation.numFalseNegatives(index));
@@ -265,7 +333,7 @@ public class OnlineWeka {
 
 	}
 
-	private static void saveValue(HashMap<String, ArrayList<Double>> measure, String algorithm, double evaluationValue) {
+	static void saveValue(HashMap<String, ArrayList<Double>> measure, String algorithm, double evaluationValue) {
 		ArrayList<Double> evaluationValues;
 
 		if(measure.containsKey(algorithm)) {
@@ -297,6 +365,84 @@ public class OnlineWeka {
 			classify(tr_arff,te_arff,arffFolder);
 
 		}
+	}
+
+}
+
+class Run{
+	HashMap<String,ArrayList<Double>> TP ;
+	  HashMap<String,ArrayList<Double>> FN ;
+	  HashMap<String,ArrayList<Double>> FP ;
+	  HashMap<String,ArrayList<Double>> TN ;
+	  HashMap<String,ArrayList<Double>> buggy ;
+	  HashMap<String,ArrayList<Double>> clean ;
+	  
+	Run(){
+		this.TP = new HashMap<>();
+		this.FN = new HashMap<>();
+		this.FP = new HashMap<>();
+		this.TN = new HashMap<>();
+		this.buggy = new HashMap<>();
+		this.clean = new HashMap<>();
+	}
+
+	public HashMap<String, ArrayList<Double>> getTP() {
+		return TP;
+	}
+
+	public void setTP(String algorithm, double tp, String cluster) {
+		saveValue(this.TP, algorithm, tp, cluster);
+	}
+
+	public HashMap<String, ArrayList<Double>> getFN() {
+		return FN;
+	}
+
+	public void setFN(String algorithm, double fn, String cluster) {
+		saveValue(this.FN, algorithm, fn, cluster);
+	}
+
+	public HashMap<String, ArrayList<Double>> getFP() {
+		return FP;
+	}
+
+	public void setFP(String algorithm, double fp, String cluster) {
+		saveValue(this.FP, algorithm, fp, cluster);
+	}
+	
+	
+	public HashMap<String, ArrayList<Double>> getBuggy() {
+		return buggy;
+	}
+
+	public void setBuggy(String algorithm, double buggy, String cluster) {
+		saveValue(this.buggy, algorithm, buggy, cluster);
+	}
+
+	public HashMap<String, ArrayList<Double>> getClean() {
+		return clean;
+	}
+
+	public void setClean(String algorithm, double clean, String cluster) {
+		saveValue(this.clean, algorithm, clean, cluster);
+	}
+
+	void saveValue(HashMap<String, ArrayList<Double>> measure, String algorithm, double confusionMatrixValue, String cluster) {
+		ArrayList<Double> evaluationValues;
+		int index = Integer.parseInt(cluster);
+		
+		if(measure.containsKey(algorithm)) {
+			evaluationValues = measure.get(algorithm);
+			double value = evaluationValues.get(index);
+			value = value + confusionMatrixValue;
+			evaluationValues.add(index,value);
+		}else {
+			evaluationValues = new ArrayList<>();
+			double value = confusionMatrixValue;
+			evaluationValues.add(index,value);
+			measure.put(algorithm, evaluationValues);
+		}
+
 	}
 
 }
