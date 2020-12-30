@@ -74,7 +74,7 @@ public class OnlineWeka {
 		BufferedWriter writer;
 		try {
 			writer = new BufferedWriter(new FileWriter(output));
-			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","precision","recall","fMeasure","mcc","class"));
+			CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","Ratio(%)","precision","recall","fMeasure","mcc","class"));
 
 			for(int i = 0; i < runs.size(); i++) {
 				String run = runs.get(i);
@@ -83,13 +83,14 @@ public class OnlineWeka {
 				int total = bc_num.get("total").get(i);
 				int buggy = bc_num.get("buggy").get(i);
 				int clean = bc_num.get("clean").get(i);
+				float ratio = ((float)buggy/(float)total) * 100;
 
 				for(String algorithm : precision.keySet()) {
 					double p = precision.get(algorithm).get(i);
 					double r = recall.get(algorithm).get(i);
 					double f = fMeasure.get(algorithm).get(i);
 					double m = mcc.get(algorithm).get(i);
-					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,p,r,f,m,Class);
+					csvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,ratio,p,r,f,m,Class);
 				}
 			}
 			csvPrinter.close();
