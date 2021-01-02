@@ -129,6 +129,7 @@ public class OnlinePBDP {
 				if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
 					if(minCommit < 50){
 						minCommit++;
+						tr_cluster_developerID.clear();
 						continue;
 					}
 				}
@@ -156,6 +157,7 @@ public class OnlinePBDP {
 				}else {
 					minCommit++;
 					BeforeNumOfDeveloper = trClusteringDeveloperID.size();
+					tr_cluster_developerID.clear();
 				}
 			}
 			System.out.println("Final minCommit of tr : "+minCommit);
