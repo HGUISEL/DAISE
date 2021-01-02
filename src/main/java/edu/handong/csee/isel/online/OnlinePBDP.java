@@ -79,6 +79,9 @@ public class OnlinePBDP {
 		//make PBDP directory
 		File PBDPdir = new File(outputPath);
 		String directoryPath = PBDPdir.getAbsolutePath();
+		if(PBDPdir.isDirectory()) {
+			deleteFile(outputPath);
+		}
 		PBDPdir.mkdir();
 
 		int BeforeNumOfDeveloper = 0;
@@ -561,8 +564,23 @@ public class OnlinePBDP {
 		}
 	}
 
+	public static void deleteFile(String path) {
+		File deleteFolder = new File(path);
 
-
+		if(deleteFolder.exists()){
+			File[] deleteFolderList = deleteFolder.listFiles();
+			
+			for (int i = 0; i < deleteFolderList.length; i++) {
+				if(deleteFolderList[i].isFile()) {
+					deleteFolderList[i].delete();
+				}else {
+					deleteFile(deleteFolderList[i].getPath());
+				}
+				deleteFolderList[i].delete(); 
+			}
+			deleteFolder.delete();
+		}
+	}
 
 	private String makeCsvFileFromTopTenDeveloperInTraining(ArrayList<String> trCommitHash, String devID) {
 
