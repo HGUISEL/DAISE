@@ -34,7 +34,8 @@ public class OnlineWeka {
 	static ArrayList<String> runs ;
 	static ArrayList<String> clusters ;
 	static ArrayList<String> classes ;
-	static HashMap<String,ArrayList<Integer>> bc_num  ;
+	static HashMap<String,ArrayList<Integer>> tr_bc_num  ;
+	static HashMap<String,ArrayList<Integer>> te_bc_num  ;
 	
 	static HashMap<String,ArrayList<Integer>> numTruePositives ;
 	static HashMap<String,ArrayList<Integer>> numFalseNegatives ;
@@ -78,16 +79,21 @@ public class OnlineWeka {
 		
 		try {
 			confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_CM.csv"));
-			CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","total","buggy","clean","Ratio(%)","TP","FN","FP","TN","class"));
+			CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","TP","FN","FP","TN","class"));
 
 			for(int i = 0; i < runs.size(); i++) {
 				String run = runs.get(i);
 				String cluster = clusters.get(i);
 				String Class = classes.get(i);
-				int total = bc_num.get("total").get(i);
-				int buggy = bc_num.get("buggy").get(i);
-				int clean = bc_num.get("clean").get(i);
-				float ratio = ((float)buggy/(float)total) * 100;
+				int total_tr = tr_bc_num.get("total").get(i);
+				int buggy_tr = tr_bc_num.get("buggy").get(i);
+				int clean_tr = tr_bc_num.get("clean").get(i);
+				float ratio_tr = ((float)buggy_tr/(float)total_tr) * 100;
+				
+				int total_te = te_bc_num.get("total").get(i);
+				int buggy_te = te_bc_num.get("buggy").get(i);
+				int clean_te = te_bc_num.get("clean").get(i);
+				float ratio_te = ((float)buggy_te/(float)total_te) * 100;
 				
 				Run runEV;
 				if(runEvaluationValue.containsKey(run)) {
@@ -102,13 +108,15 @@ public class OnlineWeka {
 					int FP = numFalsePositives.get(algorithm).get(i);
 					int TN = numTrueNegatives.get(algorithm).get(i);
 					 
-					confusionMatrixcsvPrinter.printRecord(algorithm,run,cluster,total,buggy,clean,ratio,TP,FN,FP,TN,Class);
+					confusionMatrixcsvPrinter.printRecord(algorithm,run,cluster,total_tr,buggy_tr,clean_tr,ratio_tr,total_te,buggy_te,clean_te,ratio_te,TP,FN,FP,TN,Class);
 					
 					runEV.setTP(algorithm, TP);
 					runEV.setFN(algorithm, FN);
 					runEV.setFP(algorithm, FP);
-					runEV.setBuggy(algorithm, buggy);
-					runEV.setClean(algorithm, clean);
+					runEV.setBuggy(algorithm, buggy_tr);
+					runEV.setClean(algorithm, clean_tr);
+					runEV.setTe_buggy(algorithm, buggy_te);
+					runEV.setTe_clean(algorithm, clean_te);
 				}
 				runEvaluationValue.put(run, runEV);
 			}
@@ -117,12 +125,14 @@ public class OnlineWeka {
 			
 
 			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV.csv"));
-			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","total","buggy","clean","Ratio(%)","precision","recall","fMeasure"));			
+			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","precision","recall","fMeasure"));			
 			int TPS = 0;
 			int FNS = 0;
 			int FPS = 0;
 			int buggys = 0;
 			int cleans = 0;
+			int buggys_te = 0;
+			int cleans_te = 0;
 			
 			for(String run : runEvaluationValue.keySet()) {
 				Run runEV = runEvaluationValue.get(run);
@@ -136,32 +146,38 @@ public class OnlineWeka {
 					int clean = (int)sum(runEV.getClean().get(algorithm));
 					int total = buggy + clean;
 					float ratio = ((float)buggy/(float)total) * 100;
+					int buggy_te = (int)sum(runEV.getTe_buggy().get(algorithm));
+					int clean_te = (int)sum(runEV.getTe_clean().get(algorithm));
+					int total_te = buggy_te + clean_te;
+					float ratio_te = ((float)buggy_te/(float)total_te) * 100;
 					
 					double precision = TP/(TP + FP);
 					double recall = TP/(TP + FN);
 					double fMeasure = ((precision * recall)/(precision + recall))*2;
 					
-					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,ratio,precision,recall,fMeasure);
+					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,total_te,buggy_te,clean_te,ratio,precision,recall,fMeasure);
 					TPS += TP;
 					FNS += FN;
 					FPS += FP;
 					buggys += buggy;
 					cleans += cleans;
+					buggys_te += buggy_te;
+					cleans_te += clean_te;
 				}
 			}	
 			
 			int total = buggys + cleans;
 			float ratio = ((float)buggys/(float)total) * 100;
+			int total_te = buggys_te + cleans_te;
+			float ratio_te = ((float)buggys_te/(float)total_te) * 100;
 			double precision = TPS/(TPS + FPS);
 			double recall = TPS/(TPS + FNS);
 			double fMeasure = ((precision * recall)/(precision + recall))*2;
 			
-			evaluationValuePrinter.printRecord("None","Total_Run",total,buggys,cleans,ratio,precision,recall,fMeasure);
+			evaluationValuePrinter.printRecord("None","Total_Run",total,buggys,cleans,total_te,buggys_te,cleans_te,ratio_te,precision,recall,fMeasure);
 
 			evaluationValuePrinter.close();
 			evaluationValueWriter.close();
-			
-			System.out.println(output);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -179,10 +195,15 @@ public class OnlineWeka {
 		return sum;
 	}
 	private static void init() {
-		bc_num = new HashMap<>();
-		bc_num.put("buggy", new ArrayList<Integer>());
-		bc_num.put("clean", new ArrayList<Integer>());
-		bc_num.put("total", new ArrayList<Integer>());
+		tr_bc_num = new HashMap<>();
+		tr_bc_num.put("buggy", new ArrayList<Integer>());
+		tr_bc_num.put("clean", new ArrayList<Integer>());
+		tr_bc_num.put("total", new ArrayList<Integer>());
+		
+		te_bc_num = new HashMap<>();
+		te_bc_num.put("buggy", new ArrayList<Integer>());
+		te_bc_num.put("clean", new ArrayList<Integer>());
+		te_bc_num.put("total", new ArrayList<Integer>());
 
 		numTruePositives = new HashMap<>();
 		numFalseNegatives = new HashMap<>();
@@ -247,26 +268,42 @@ public class OnlineWeka {
 			testData.setClassIndex(0);
 			System.out.println(testData.classAttribute());
 
-			//save num of buggy and clean instance
+			//save num of buggy and clean instance in training data set
 			AttributeStats attStats = Data.attributeStats(0);
 
 			Pattern pattern = Pattern.compile(".+\\{(\\w+),(\\w+)\\}");
 			Matcher m = pattern.matcher(Data.attribute(0).toString());
 			m.find();
 
-			ArrayList<Integer> a = bc_num.get(m.group(1));
-			ArrayList<Integer> b = bc_num.get(m.group(2));
-			ArrayList<Integer> c = bc_num.get("total");
+			ArrayList<Integer> tr_a = tr_bc_num.get(m.group(1));
+			ArrayList<Integer> tr_b = tr_bc_num.get(m.group(2));
+			ArrayList<Integer> tr_c = tr_bc_num.get("total");
 
 			int index = 10;
 			if(m.group(1).compareTo("buggy") == 0) index = 0;
 			else index = 1;
 
-			a.add(attStats.nominalCounts[0]);
-			b.add(attStats.nominalCounts[1]);
-			c.add(attStats.totalCount);
+			tr_a.add(attStats.nominalCounts[0]);
+			tr_b.add(attStats.nominalCounts[1]);
+			tr_c.add(attStats.totalCount);
 			System.out.println("buggy clean index : "+index);
+			
+			//save num of buggy and clean instance in test data set
+			
+			AttributeStats attStats_te = testData.attributeStats(0);
 
+			Pattern pattern_te = Pattern.compile(".+\\{(\\w+),(\\w+)\\}");
+			Matcher m_te = pattern_te.matcher(testData.attribute(0).toString());
+			m_te.find();
+
+			ArrayList<Integer> te_a = te_bc_num.get(m_te.group(1));
+			ArrayList<Integer> te_b = te_bc_num.get(m_te.group(2));
+			ArrayList<Integer> te_c = te_bc_num.get("total");
+
+			te_a.add(attStats_te.nominalCounts[0]);
+			te_b.add(attStats_te.nominalCounts[1]);
+			te_c.add(attStats_te.totalCount);
+			
 			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
 
 			for(String algorithm : algorithms) {
@@ -374,6 +411,8 @@ class Run{
 	HashMap<String,ArrayList<Integer>> TN ;
 	HashMap<String,ArrayList<Integer>> buggy ;
 	HashMap<String,ArrayList<Integer>> clean ;
+	HashMap<String,ArrayList<Integer>> te_buggy ;
+	HashMap<String,ArrayList<Integer>> te_clean ;
 	  
 	Run(){
 		this.TP = new HashMap<>();
@@ -382,6 +421,8 @@ class Run{
 		this.TN = new HashMap<>();
 		this.buggy = new HashMap<>();
 		this.clean = new HashMap<>();
+		this.te_buggy = new HashMap<>();
+		this.te_clean = new HashMap<>();
 	}
 	
 	
@@ -465,6 +506,28 @@ class Run{
 	public void setClean(String algorithm, int confusionMatrixValue) {
 		OnlineWeka.saveValue(this.clean, algorithm, confusionMatrixValue);
 	}
+
+
+	public HashMap<String, ArrayList<Integer>> getTe_buggy() {
+		return te_buggy;
+	}
+
+
+	public void setTe_buggy(String algorithm, int confusionMatrixValue) {
+		OnlineWeka.saveValue(this.te_buggy, algorithm, confusionMatrixValue);
+	}
+
+
+	public HashMap<String, ArrayList<Integer>> getTe_clean() {
+		return te_clean;
+	}
+
+
+	public void setTe_clean(String algorithm, int confusionMatrixValue) {
+		OnlineWeka.saveValue(this.te_clean, algorithm, confusionMatrixValue);
+	}
+	
+	
 
 
 //
