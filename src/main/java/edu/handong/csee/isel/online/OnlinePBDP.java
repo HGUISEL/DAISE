@@ -191,15 +191,16 @@ public class OnlinePBDP {
 		}	
 
 		//call PBDP weka directoryPath
-		wekaClassify(directoryPath,wekaOutputPath);
+		wekaClassify(directoryPath,wekaOutputPath,defaultCluster);
 
 	}
 
-	public void wekaClassify(String path, String wekaOutputPath) throws Exception {
+	public void wekaClassify(String path, String wekaOutputPath, int defaultCluster) throws Exception {
 		String[] WekaArgs = new String[4];
 
 		WekaArgs[0] = path;
 		WekaArgs[1] = wekaOutputPath;
+		WekaArgs[2] = Integer.toString(defaultCluster);
 
 		OnlineWeka onlineWeka = new OnlineWeka();
 		onlineWeka.main(WekaArgs);
@@ -399,7 +400,7 @@ public class OnlinePBDP {
 
 		//apply EM clustering algorithm
 		EM em = new EM(); //option
-		if(defaultCluster != 0) {
+		if((defaultCluster != 0) || (defaultCluster != 1)) {
 			em.setNumClusters(defaultCluster); //option
 		}
 		em.buildClusterer(newData);

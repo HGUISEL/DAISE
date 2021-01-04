@@ -31,6 +31,8 @@ public class OnlineWeka {
 	 * args[0] : arff folder path
 	 * args[1] : result path
 	 */
+	static String defaultCluster;
+	
 	static ArrayList<String> runs ;
 	static ArrayList<String> clusters ;
 	static ArrayList<String> classes ;
@@ -44,7 +46,8 @@ public class OnlineWeka {
 
 	public void main(String[] args) throws Exception {
 		init();
-
+		defaultCluster = args[2];
+		
 		String inputPath = args[0];
 		File dir = new File(inputPath);
 		File []fileList = dir.listFiles();
@@ -79,7 +82,7 @@ public class OnlineWeka {
 		BufferedWriter evaluationValueWriter;
 		
 		try {
-			confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_CM.csv"));
+			confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_CM_"+defaultCluster+".csv"));
 			CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","TP","FN","FP","TN","class"));
 
 			for(int i = 0; i < runs.size(); i++) {
@@ -125,7 +128,7 @@ public class OnlineWeka {
 			confusionMatrixWriter.close();
 			
 
-			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV.csv"));
+			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV_"+defaultCluster+".csv"));
 			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","precision","recall","fMeasure"));			
 
 			
@@ -330,7 +333,7 @@ public class OnlineWeka {
 			te_b.add(attStats_te.nominalCounts[1]);
 			te_c.add(attStats_te.totalCount);
 			
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk","naive"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;

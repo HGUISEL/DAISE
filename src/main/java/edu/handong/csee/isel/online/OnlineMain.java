@@ -678,7 +678,7 @@ public class OnlineMain {
 					commitHash_developer);
 
 			//call base line weka  directoryPath
-			onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath);
+			onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath, defaultCluster);
 
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
@@ -1013,6 +1013,9 @@ public class OnlineMain {
 			
 			if(cmd.hasOption("c")){
 				defaultCluster = Integer.parseInt(cmd.getOptionValue("c"));
+				if(defaultCluster == 1) defaultCluster = 0;
+			}else {
+				defaultCluster = 0;
 			}
 
 			if(cmd.hasOption("s") && cmd.hasOption("e")) {
