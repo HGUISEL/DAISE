@@ -73,7 +73,8 @@ public class OnlineWeka {
 	}
 	private static void makeCSVFile(String output) {
 		HashMap<String,Run> runEvaluationValue = new HashMap<>();
-
+		HashMap<String,AllRun> algorithm_BC = new HashMap<>();
+		
 		BufferedWriter confusionMatrixWriter;
 		BufferedWriter evaluationValueWriter;
 		
@@ -126,19 +127,14 @@ public class OnlineWeka {
 
 			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV.csv"));
 			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","precision","recall","fMeasure"));			
-			int TPS = 0;
-			int FNS = 0;
-			int FPS = 0;
-			int buggys = 0;
-			int cleans = 0;
-			int buggys_te = 0;
-			int cleans_te = 0;
+
 			
 			for(String run : runEvaluationValue.keySet()) {
 				Run runEV = runEvaluationValue.get(run);
 				
 				
 				for(String algorithm : runEV.getTP().keySet()) {
+					
 					double TP = sum(runEV.getTP().get(algorithm));
 					double FN = sum(runEV.getFN().get(algorithm));
 					double FP = sum(runEV.getFP().get(algorithm));
@@ -146,6 +142,7 @@ public class OnlineWeka {
 					int clean = (int)sum(runEV.getClean().get(algorithm));
 					int total = buggy + clean;
 					float ratio = ((float)buggy/(float)total) * 100;
+					
 					int buggy_te = (int)sum(runEV.getTe_buggy().get(algorithm));
 					int clean_te = (int)sum(runEV.getTe_clean().get(algorithm));
 					int total_te = buggy_te + clean_te;
@@ -155,26 +152,55 @@ public class OnlineWeka {
 					double recall = TP/(TP + FN);
 					double fMeasure = ((precision * recall)/(precision + recall))*2;
 					
-					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,total_te,buggy_te,clean_te,ratio,precision,recall,fMeasure);
-					TPS += TP;
-					FNS += FN;
-					FPS += FP;
-					buggys += buggy;
-					cleans += cleans;
-					buggys_te += buggy_te;
-					cleans_te += clean_te;
+					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,ratio,total_te,buggy_te,clean_te,ratio_te,precision,recall,fMeasure);
+					
+					AllRun allRun;
+					if(algorithm_BC.containsKey(algorithm)) {
+						allRun = algorithm_BC.get(algorithm);
+						allRun.setBuggys_te(buggy_te);
+						allRun.setClean_te(clean_te);
+						allRun.setBuggys(buggy);
+						allRun.setCleans(clean);
+						allRun.setTPS((int)TP);
+						allRun.setFNS((int)FN);
+						allRun.setFPS((int)FP);
+					}else {
+						allRun = new AllRun();
+						allRun.setBuggys_te(buggy_te);
+						allRun.setClean_te(clean_te);
+						allRun.setBuggys(buggy);
+						allRun.setCleans(clean);
+						allRun.setTPS((int)TP);
+						allRun.setFNS((int)FN);
+						allRun.setFPS((int)FP);
+						algorithm_BC.put(algorithm, allRun);
+					}
 				}
-			}	
+			}
 			
-			int total = buggys + cleans;
-			float ratio = ((float)buggys/(float)total) * 100;
-			int total_te = buggys_te + cleans_te;
-			float ratio_te = ((float)buggys_te/(float)total_te) * 100;
-			double precision = TPS/(TPS + FPS);
-			double recall = TPS/(TPS + FNS);
-			double fMeasure = ((precision * recall)/(precision + recall))*2;
-			
-			evaluationValuePrinter.printRecord("None","Total_Run",total,buggys,cleans,total_te,buggys_te,cleans_te,ratio_te,precision,recall,fMeasure);
+			//print each algorithm EV
+			for(String algorithm : algorithm_BC.keySet()) {
+				AllRun allRun = algorithm_BC.get(algorithm);
+				int buggys = allRun.getBuggys();
+				int cleans = allRun.getCleans();
+				int buggys_te = allRun.getBuggys_te();
+				int cleans_te = allRun.getClean_te();
+				double TPS = allRun.getTPS();
+				double FNS = allRun.getFNS();
+				double FPS = allRun.getFPS();
+				
+				int total = buggys + cleans;
+				float ratio = ((float)buggys/(float)total) * 100;
+				int total_te = buggys_te + cleans_te;
+				float ratio_te = ((float)buggys_te/(float)total_te) * 100;
+				
+				double precision = TPS/(TPS + FPS);
+				double recall = TPS/(TPS + FNS);
+				double fMeasure = ((precision * recall)/(precision + recall))*2;
+				
+				evaluationValuePrinter.printRecord(algorithm,"Total_Run",total,buggys,cleans,ratio,total_te,buggys_te,cleans_te,ratio_te,precision,recall,fMeasure);
+
+			}
 
 			evaluationValuePrinter.close();
 			evaluationValueWriter.close();
@@ -304,7 +330,7 @@ public class OnlineWeka {
 			te_b.add(attStats_te.nominalCounts[1]);
 			te_c.add(attStats_te.totalCount);
 			
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk","naive"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;
@@ -402,6 +428,99 @@ public class OnlineWeka {
 		}
 	}
 
+}
+
+class AllRun{
+	int buggys;
+	int cleans;
+	int buggys_te;
+	int clean_te;
+	int TPS ;
+	int FNS ;
+	int FPS ;
+	
+	AllRun(){
+		buggys = 0;
+		cleans = 0;
+		buggys_te = 0;
+		clean_te = 0;
+		TPS = 0;
+		FNS = 0;
+		FPS = 0;
+	}
+
+	public int getBuggys() {
+		return buggys;
+	}
+
+
+
+	public void setBuggys(int buggys) {
+		this.buggys = this.buggys + buggys;
+	}
+
+
+
+	public int getCleans() {
+		return cleans;
+	}
+
+
+
+	public void setCleans(int cleans) {
+		this.cleans = this.cleans + cleans;
+	}
+
+
+
+	public int getBuggys_te() {
+		return buggys_te;
+	}
+
+
+
+	public void setBuggys_te(int buggys_te) {
+		this.buggys_te = this.buggys_te + buggys_te;
+	}
+
+
+
+	public int getClean_te() {
+		return clean_te;
+	}
+
+
+
+	public void setClean_te(int clean_te) {
+		this.clean_te = this.clean_te + clean_te;
+	}
+
+
+
+	public int getTPS() {
+		return TPS;
+	}
+
+	public void setTPS(int tPS) {
+		this.TPS = this.TPS + tPS;
+	}
+
+	public int getFNS() {
+		return FNS;
+	}
+
+	public void setFNS(int fNS) {
+		this.FNS = this.FNS + fNS;
+	}
+
+	public int getFPS() {
+		return FPS;
+	}
+
+	public void setFPS(int fPS) {
+		this.FPS = this.FPS + fPS;
+	}
+	
 }
 
 class Run{
