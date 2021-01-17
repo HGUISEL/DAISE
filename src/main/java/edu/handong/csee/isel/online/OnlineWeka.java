@@ -57,17 +57,17 @@ public class OnlineWeka {
 		m.find();
 		String projectname = m.group(1);
 
-		String output = args[1] +File.separator + projectname+"_result_online";
+		String output = args[1] +File.separator + projectname;
 
 		ArrayList<String> fileName = new ArrayList<>();
 		for(File file : fileList) {
 			fileName.add(file.getName());
 		}
 
-		if(!projectname.endsWith("PBDP")) {
-			onlineBaseLine(fileName,args[0]);
-		}else {
+		if(projectname.endsWith("PBDP-C"+defaultCluster) || projectname.endsWith("PBDP-M-C"+defaultCluster)) {
 			onlinePBDP(fileName,args[0]);
+		}else {
+			onlineBaseLine(fileName,args[0]);
 		}
 
 		makeCSVFile(output);
@@ -248,6 +248,8 @@ public class OnlineWeka {
 		ArrayList<String> finishFileName = new ArrayList<String>();
 
 		for(String name : fileName) {
+			if(name.endsWith(".csv")) continue;
+			
 			String[] str = name.split("_");
 			String run = null;
 			String cluster = null;

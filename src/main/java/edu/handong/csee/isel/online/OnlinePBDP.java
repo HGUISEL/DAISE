@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,6 +34,7 @@ public class OnlinePBDP {
 	String projectName;
 	String referencePath;
 	boolean accumulate;
+	boolean isMinCommit;
 	int run = 0;
 
 	ArrayList<RunDate> runDates;
@@ -71,9 +73,9 @@ public class OnlinePBDP {
 			HashMap<String,HashMap<String,Boolean>> commitHash_key_isBuggy,
 			HashMap<String,String> commitHash_developer) throws Exception {
 		System.out.println();
-		System.out.println("################################################################");
-		System.out.println("###        Start Online PBDP2   |   Accumulate = "+accumulate+"       ###");
-		System.out.println("################################################################");
+		System.out.println("######################################################################################");
+		System.out.println("###        Start Online PBDP2   |   DefaultCluster = "+defaultCluster+"    |   isMinCommit = "+isMinCommit+"   ###");
+		System.out.println("######################################################################################");
 		System.out.println();
 
 		//make PBDP directory
@@ -84,14 +86,24 @@ public class OnlinePBDP {
 		}
 		PBDPdir.mkdir();
 
+		HashMap<Integer,RunningData> run_runningData = new HashMap<>();
 		int BeforeNumOfDeveloper = 0;
+		int trNumOfCommitHash;
+		int trDeveloper;
 
 		for(RunDate runDate : runDates) {
-
+			RunningData runningData = new RunningData();
+			
 			numOfCluster = 0;
-			minCommit = 10;
+			if(isMinCommit) {
+				minCommit = 10;
+			}else {
+				minCommit = 0;
+			}
 			BeforeNumOfDeveloper = 0;
-
+			trNumOfCommitHash = 0;
+			trDeveloper = 0;
+			
 			System.out.println("------------------Run = "+ run + " ------------------");
 
 			//cal the number of developer commit in training set
@@ -104,13 +116,18 @@ public class OnlinePBDP {
 			System.out.println("gapE_teS = "+ gapE_teS);
 			System.out.println("teE = "+ teE);
 			System.out.println();
+			
+			runningData.setTrS(trS);
+			runningData.setTrE_gapS(trE_gapS);
+			runningData.setGapE_teS(gapE_teS);
+			runningData.setTeE(teE);
 
 			//make developerID_commitHashs in training period
 			HashMap<String,ArrayList<String>> tr_developerID_commitHashs; //in tr period
 
 			tr_developerID_commitHashs = countTheNumOfdeveloperAndCommit(trS, trE_gapS, commitTime_commitHash, commitHash_developer,"tr");
 			System.out.println("numOfDev in tr peroid : "+tr_developerID_commitHashs.size());
-
+			
 			//count the number of dveloper commit tr peroid- descending order in
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer;
 			numOfCommit_developer = countTheNumOfDeveloperCommit(tr_developerID_commitHashs);
@@ -126,18 +143,24 @@ public class OnlinePBDP {
 					ArrayList<String> devID = numOfCommit_developer.get(numOfCommit);
 					trClusteringDeveloperID.addAll(devID);
 				}
-				if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
-					if(minCommit < 50){
-						minCommit++;
-						tr_cluster_developerID.clear();
-						continue;
+				
+				if(isMinCommit == true) {
+					if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
+						if(minCommit < 30){
+							minCommit++;
+							tr_cluster_developerID.clear();
+							continue;
+						}
 					}
 				}
 				//				System.out.println("Top developer id in tr set: "+trClusteringDeveloperID.size());
 
 				//count numOfCluster
 				//0. save only tr commitHash (top Devloper)
-				ArrayList<String>trClusteringCommitHash = saveDeveloperCommitHash(trClusteringDeveloperID,tr_developerID_commitHashs);
+				ArrayList<String> trClusteringCommitHash = saveDeveloperCommitHash(trClusteringDeveloperID,tr_developerID_commitHashs);
+				trNumOfCommitHash = trClusteringCommitHash.size();
+				trDeveloper = trClusteringDeveloperID.size();
+				
 				//1. make developer profiling data set
 				String profilingMetadatacsvPath = makeCsvFileFromTopTenDeveloperInTraining(trClusteringCommitHash,"tr");
 				if(profilingMetadatacsvPath == null) {
@@ -149,20 +172,30 @@ public class OnlinePBDP {
 				tr_cluster_developerID = clusteringProfilingDeveloper(developerProfiling);
 				//3. parsing cluster result
 				numOfCluster = tr_cluster_developerID.size();
-
-				if(numOfCluster != 1) {
-					break;
-				}else if(minCommit == 50){
-					break;
+				
+				if(defaultCluster != 0) break;
+				
+				if(isMinCommit == true) {
+					if((numOfCluster != 1)) {
+						break;
+					}else if(minCommit == 30){
+						break;
+					}else {
+						minCommit++;
+						BeforeNumOfDeveloper = trClusteringDeveloperID.size();
+						tr_cluster_developerID.clear();
+					}
 				}else {
-					minCommit++;
-					BeforeNumOfDeveloper = trClusteringDeveloperID.size();
-					tr_cluster_developerID.clear();
+					break;
 				}
 			}
 			System.out.println("Final minCommit of tr : "+minCommit);
 			System.out.println("Final numOfCluster of tr : "+numOfCluster);
-
+			runningData.setAllTrDeveloper(tr_developerID_commitHashs.size());
+			runningData.setNumOfCluster(numOfCluster);
+			runningData.setTrCommit(trNumOfCommitHash);
+			runningData.setTrDeveloper(trDeveloper);
+			
 			//make tr arff file in each clustering
 			makeArffFileInEachTrClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, key_fixTime, commitHash_key_isBuggy, teE);
 			System.out.println();
@@ -182,18 +215,43 @@ public class OnlinePBDP {
 			//read each test developer csv and find cluster
 			HashMap<Integer,ArrayList<String>> teCluster_developerID = clusteringTestProfilingDeveloper(teDeveloperProfiling);
 
+			//count number of test set commit 
+			int total = 0;
+			for (ArrayList<String> l : te_developerID_commitHashs.values()) {
+			    total += l.size();
+			}
+			runningData.setTeDeveloper(te_developerID_commitHashs.size());
+			runningData.setTeCommit(total);
+			
 			//make te arff file in each clustering
 			makeArffFileInEachTestClustering(teCluster_developerID, te_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run);
 
+			//save running data
+			run_runningData.put(run,runningData);
 			run++;
-
-			//			break;
 		}	
-
+		
+		Save2CSV(directoryPath,run_runningData);
+		System.out.println(directoryPath);
 		//call PBDP weka directoryPath
 		wekaClassify(directoryPath,wekaOutputPath,defaultCluster);
 
 	}
+
+	private void Save2CSV(String directoryPath, HashMap<Integer, RunningData> run_runningData) throws Exception {
+		String resultCSVPath = directoryPath + File.separator + "Run_PBDP_Information.csv";
+		BufferedWriter writer = new BufferedWriter(new FileWriter(resultCSVPath));
+		CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader("TrS","TrEn_GapS","GapEn_TeSt","TeE","numOfCluster","trCommit","AlltrDeveloper","trClusteringDev","teCommit","teDeveloper"));
+
+		for(int i = 0; i < run; i++) {
+			RunningData runningData = run_runningData.get(i);
+			csvPrinter.printRecord(runningData.getTrS(),runningData.getTrE_gapS(),runningData.getGapE_teS(),runningData.getTeE(),runningData.getNumOfCluster(),runningData.getTrCommit(),runningData.getAllTrDeveloper(),runningData.getTrDeveloper(),runningData.getTeCommit(),runningData.getTeDeveloper());
+		}
+		csvPrinter.close();
+		writer.close();
+		
+	}
+
 
 	public void wekaClassify(String path, String wekaOutputPath, int defaultCluster) throws Exception {
 		String[] WekaArgs = new String[4];
@@ -400,7 +458,7 @@ public class OnlinePBDP {
 
 		//apply EM clustering algorithm
 		EM em = new EM(); //option
-		if((defaultCluster != 0) || (defaultCluster != 1)) {
+		if(defaultCluster != 0) {
 			em.setNumClusters(defaultCluster); //option
 		}
 		em.buildClusterer(newData);
@@ -664,6 +722,11 @@ public class OnlinePBDP {
 	public void setDefaultCluster(int defaultCluster) {
 		this.defaultCluster = defaultCluster;
 	}
+
+
+	public void setMinCommit(boolean isMinCommit) {
+		this.isMinCommit = isMinCommit;
+	}
 	
 	
 	
@@ -675,20 +738,128 @@ class RunningData{
 	String trE_gapS;
 	String gapE_teS;
 	String teE;
+	
+	int numOfCluster;
+	
 	int trCommit;
-	int trCluster;
 	int trDeveloper;
-
+	int allTrDeveloper;
 	int teCommit;
 	int teDeveloper;
 
 
 	RunningData(){
-		trS = null;
-		trE_gapS = null;
-		gapE_teS = null;
-		teE = null;
+		this.trS = null;
+		this.trE_gapS = null;
+		this.gapE_teS = null;
+		this.teE = null;
+		this.numOfCluster = 0;
+		this.trCommit = 0;
+		this.trDeveloper = 0;
+		this.teCommit = 0;
+		this.teDeveloper = 0;
+		this.allTrDeveloper = 0;
 	}
 
+
+	public String getTrS() {
+		return trS;
+	}
+
+
+	public void setTrS(String trS) {
+		this.trS = trS;
+	}
+
+
+	public String getTrE_gapS() {
+		return trE_gapS;
+	}
+
+
+	public void setTrE_gapS(String trE_gapS) {
+		this.trE_gapS = trE_gapS;
+	}
+
+
+	public String getGapE_teS() {
+		return gapE_teS;
+	}
+
+
+	public void setGapE_teS(String gapE_teS) {
+		this.gapE_teS = gapE_teS;
+	}
+
+
+	public String getTeE() {
+		return teE;
+	}
+
+
+	public void setTeE(String teE) {
+		this.teE = teE;
+	}
+
+
+	public int getNumOfCluster() {
+		return numOfCluster;
+	}
+
+
+	public void setNumOfCluster(int numOfCluster) {
+		this.numOfCluster = numOfCluster;
+	}
+
+
+	public int getTrCommit() {
+		return trCommit;
+	}
+
+
+	public void setTrCommit(int trCommit) {
+		this.trCommit = trCommit;
+	}
+
+
+	public int getTrDeveloper() {
+		return trDeveloper;
+	}
+
+
+	public void setTrDeveloper(int trDeveloper) {
+		this.trDeveloper = trDeveloper;
+	}
+
+
+	public int getTeCommit() {
+		return teCommit;
+	}
+
+
+	public void setTeCommit(int teCommit) {
+		this.teCommit = teCommit;
+	}
+
+
+	public int getTeDeveloper() {
+		return teDeveloper;
+	}
+
+
+	public void setTeDeveloper(int teDeveloper) {
+		this.teDeveloper = teDeveloper;
+	}
+
+
+	public int getAllTrDeveloper() {
+		return allTrDeveloper;
+	}
+
+
+	public void setAllTrDeveloper(int allTrDeveloper) {
+		this.allTrDeveloper = allTrDeveloper;
+	}
+	
 
 }

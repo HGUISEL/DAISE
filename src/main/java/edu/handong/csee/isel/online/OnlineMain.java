@@ -34,6 +34,8 @@ public class OnlineMain {
 	String dataPath;
 	String BICpath;
 	boolean accumulate;
+	boolean isMinCommit;
+	boolean isBaseLine;
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
@@ -660,7 +662,13 @@ public class OnlineMain {
 			//compute PBDF
 			OnlinePBDP onlinePBDP = new OnlinePBDP();
 			//set default variable
-			onlinePBDP.setOutputPath(baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP"+File.separator);
+			String PBDPpath;
+			if(isMinCommit) {
+				PBDPpath = baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP-M-C"+defaultCluster+File.separator;
+			}else {
+				PBDPpath = baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP-C"+defaultCluster+File.separator;
+			}
+			onlinePBDP.setOutputPath(PBDPpath);
 			onlinePBDP.setProjectName(baseSet.ProjectName());
 			onlinePBDP.setRunDates(runDates);
 			onlinePBDP.setReferencePath(baseSet.ReferenceFolderPath() +File.separator+baseSet.ProjectName()+"-reference"+File.separator);
@@ -668,6 +676,7 @@ public class OnlineMain {
 			onlinePBDP.setWekaOutputPath(wekaDirectoryPath);
 			onlinePBDP.setDefaultLabel(defaultLabel);
 			onlinePBDP.setDefaultCluster(defaultCluster);
+			onlinePBDP.setMinCommit(isMinCommit);
 			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
@@ -678,8 +687,9 @@ public class OnlineMain {
 					commitHash_developer);
 
 			//call base line weka  directoryPath
-			onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath, defaultCluster);
-
+			if(isBaseLine) {
+				onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath, defaultCluster);
+			}
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 			}
@@ -1013,7 +1023,6 @@ public class OnlineMain {
 			
 			if(cmd.hasOption("c")){
 				defaultCluster = Integer.parseInt(cmd.getOptionValue("c"));
-				if(defaultCluster == 1) defaultCluster = 0;
 			}else {
 				defaultCluster = 0;
 			}
@@ -1045,6 +1054,8 @@ public class OnlineMain {
 				baseSet.setUpdateDays(0);
 			}
 			accumulate = cmd.hasOption("a");
+			isMinCommit = cmd.hasOption("m");
+			isBaseLine = cmd.hasOption("bl");
 			help = cmd.hasOption("h");
 
 		} catch (Exception e) {
@@ -1120,6 +1131,16 @@ public class OnlineMain {
 		options.addOption(Option.builder("a").longOpt("isAccumulate")
 				.desc("Are the developers of the test set accumulated?.")
 				.argName("accumulate?")
+				.build());
+		
+		options.addOption(Option.builder("m").longOpt("isMincommit")
+				.desc("Are the minCommit exist.")
+				.argName("minCommit?")
+				.build());
+		
+		options.addOption(Option.builder("bl").longOpt("isBaseLine")
+				.desc("Do baseLine weka classify")
+				.argName("isBaseLine?")
 				.build());
 
 		options.addOption(Option.builder("h").longOpt("help")
