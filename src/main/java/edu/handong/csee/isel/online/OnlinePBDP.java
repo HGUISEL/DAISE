@@ -197,7 +197,7 @@ public class OnlinePBDP {
 			runningData.setTrDeveloper(trDeveloper);
 			
 			//make tr arff file in each clustering
-			makeArffFileInEachTrClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, key_fixTime, commitHash_key_isBuggy, teE);
+			TreeMap<Integer,Integer> trcluster_numOfKey = makeArffFileInEachTrClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, key_fixTime, commitHash_key_isBuggy, teE);
 			System.out.println();
 			System.out.println("test start");
 
@@ -339,9 +339,9 @@ public class OnlinePBDP {
 		return teProfilingMetadatacsvPath;
 	}
 	
-	private void makeArffFileInEachTrClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
+	private TreeMap<Integer, Integer> makeArffFileInEachTrClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run, TreeMap<String, String> key_fixTime, HashMap<String, HashMap<String, Boolean>> commitHash_key_isBuggy, String teE) throws Exception {
-
+		TreeMap<Integer,Integer> trcluster_numOfKey = new TreeMap<>();
 		File newDevelopeBaseLineArff = new File(outputPath +File.separator+"run_"+run+"_cluster_PBDPbaseline_tr.arff");
 		StringBuffer newBaseLineContentBuf = new StringBuffer();
 		
@@ -353,6 +353,7 @@ public class OnlinePBDP {
 		
 		for(int cluster : cluster_developerID.keySet()) {
 			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_tr.arff");
+			int numOfKey = 0;
 			
 			// ./run_1_cluster_2_tr.arff
 			StringBuffer newContentBuf = new StringBuffer();
@@ -364,7 +365,7 @@ public class OnlinePBDP {
 				if(line.startsWith("@attribute Key {")) continue;
 				newContentBuf.append(line + "\n");
 			}
-
+			
 			//write data
 			for(String developerID : tr_developerID_commitHashs.keySet()) {
 				if(developerIDs.contains(developerID)) {
@@ -397,14 +398,17 @@ public class OnlinePBDP {
 							}
 							newContentBuf.append(data + "\n");
 							newBaseLineContentBuf.append(data + "\n");
+							numOfKey++;
 						}
 					}
 				}
 			}
 			FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+			trcluster_numOfKey.put(cluster, numOfKey);
+			
 		}
 		FileUtils.write(newDevelopeBaseLineArff, newBaseLineContentBuf.toString(), "UTF-8");
-
+		return trcluster_numOfKey;
 	}
 
 	private void makeArffFileInEachTestClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
