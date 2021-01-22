@@ -230,7 +230,7 @@ public class OnlinePBDP {
 			run_runningData.put(run,runningData);
 			run++;
 		}	
-		
+//		System.exit(0);
 		Save2CSV(directoryPath,run_runningData);
 		System.out.println(directoryPath);
 		//call PBDP weka directoryPath
@@ -342,9 +342,18 @@ public class OnlinePBDP {
 	private void makeArffFileInEachTrClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run, TreeMap<String, String> key_fixTime, HashMap<String, HashMap<String, Boolean>> commitHash_key_isBuggy, String teE) throws Exception {
 
-
+		File newDevelopeBaseLineArff = new File(outputPath +File.separator+"run_"+run+"_cluster_PBDPbaseline_tr.arff");
+		StringBuffer newBaseLineContentBuf = new StringBuffer();
+		
+		for (String line : attributeLineList) {
+			if(line.startsWith("@attribute meta_data-commitTime")) continue;
+			if(line.startsWith("@attribute Key {")) continue;
+			newBaseLineContentBuf.append(line + "\n");
+		}
+		
 		for(int cluster : cluster_developerID.keySet()) {
 			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_tr.arff");
+			
 			// ./run_1_cluster_2_tr.arff
 			StringBuffer newContentBuf = new StringBuffer();
 			ArrayList<String> developerIDs = cluster_developerID.get(cluster);
@@ -386,16 +395,15 @@ public class OnlinePBDP {
 									}
 								}
 							}
-							
 							newContentBuf.append(data + "\n");
+							newBaseLineContentBuf.append(data + "\n");
 						}
 					}
 				}
 			}
-
 			FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
-
 		}
+		FileUtils.write(newDevelopeBaseLineArff, newBaseLineContentBuf.toString(), "UTF-8");
 
 	}
 
@@ -666,7 +674,7 @@ public class OnlinePBDP {
 					}
 				}
 			}
-
+			writer.close();
 			csvPrinter.close();
 			return resultCSVPath;
 		} catch (Exception e) {
