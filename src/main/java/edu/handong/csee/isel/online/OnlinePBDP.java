@@ -197,10 +197,10 @@ public class OnlinePBDP {
 			runningData.setTrDeveloper(trDeveloper);
 			
 			//make tr arff file in each clustering
-			TreeMap<Integer,Integer> trcluster_numOfKey = makeArffFileInEachTrClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, key_fixTime, commitHash_key_isBuggy, teE);
+			TreeMap<Integer,String> trcluster_clusterName = makeArffFileInEachTrClustering(tr_cluster_developerID, tr_developerID_commitHashs, attributeLineList, commitHash_key_data, outputPath, run, key_fixTime, commitHash_key_isBuggy, teE);
+			
 			System.out.println();
 			System.out.println("test start");
-
 			//////////////////////
 			//	  test set      //
 			//////////////////////
@@ -339,9 +339,10 @@ public class OnlinePBDP {
 		return teProfilingMetadatacsvPath;
 	}
 	
-	private TreeMap<Integer, Integer> makeArffFileInEachTrClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
+	private TreeMap<Integer, String> makeArffFileInEachTrClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run, TreeMap<String, String> key_fixTime, HashMap<String, HashMap<String, Boolean>> commitHash_key_isBuggy, String teE) throws Exception {
-		TreeMap<Integer,Integer> trcluster_numOfKey = new TreeMap<>();
+		TreeMap<Integer,String> trcluster_clusterName = new TreeMap<>();
+		TreeMap<Integer,ArrayList<Integer>> numOfKey_trcluster = new TreeMap<>(Collections.reverseOrder());
 		File newDevelopeBaseLineArff = new File(outputPath +File.separator+"run_"+run+"_cluster_PBDPbaseline_tr.arff");
 		StringBuffer newBaseLineContentBuf = new StringBuffer();
 		
@@ -404,11 +405,33 @@ public class OnlinePBDP {
 				}
 			}
 			FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
-			trcluster_numOfKey.put(cluster, numOfKey);
-			
+			ArrayList<Integer> trclusters;
+			if(numOfKey_trcluster.containsKey(numOfKey)) {
+				trclusters = numOfKey_trcluster.get(numOfKey);
+				trclusters.add(cluster);
+			}else {
+				trclusters = new ArrayList<Integer>();
+				trclusters.add(cluster);
+				numOfKey_trcluster.put(numOfKey, trclusters);
+			}
 		}
 		FileUtils.write(newDevelopeBaseLineArff, newBaseLineContentBuf.toString(), "UTF-8");
-		return trcluster_numOfKey;
+		
+		float largestKey = numOfKey_trcluster.firstKey();
+		int twentyPercentOfLargestKey = (int)(largestKey * 0.2);
+		
+		for(int numOfKey : numOfKey_trcluster.keySet()) {
+			ArrayList<Integer> trclusters = numOfKey_trcluster.get(numOfKey);
+			for(int trcluster : trclusters) {
+				String clusterName = Integer.toString(trcluster);
+				if(numOfKey < twentyPercentOfLargestKey) {
+					clusterName = "baseline";
+				}
+				trcluster_clusterName.put(trcluster,clusterName);
+			}
+		}
+		
+		return trcluster_clusterName;
 	}
 
 	private void makeArffFileInEachTestClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
