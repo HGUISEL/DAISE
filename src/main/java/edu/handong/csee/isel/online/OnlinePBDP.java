@@ -213,7 +213,7 @@ public class OnlinePBDP {
 			ArrayList<File> teDeveloperProfiling = collectingTestDeveloperProfilingMetrics(teProfilingMetadatacsvPath);
 
 			//read each test developer csv and find cluster
-			HashMap<Integer,ArrayList<String>> teCluster_developerID = clusteringTestProfilingDeveloper(teDeveloperProfiling);
+			HashMap<String,ArrayList<String>> teCluster_developerID = clusteringTestProfilingDeveloper(teDeveloperProfiling, trcluster_clusterName);
 
 			//count number of test set commit 
 			int total = 0;
@@ -264,8 +264,8 @@ public class OnlinePBDP {
 		onlineWeka.main(WekaArgs);
 	}
 
-	private HashMap<Integer, ArrayList<String>> clusteringTestProfilingDeveloper(ArrayList<File> teDeveloperProfiling) throws Exception {
-		HashMap<Integer,ArrayList<String>> teCluster_developerID = new HashMap<>();
+	private HashMap<String, ArrayList<String>> clusteringTestProfilingDeveloper(ArrayList<File> teDeveloperProfiling, TreeMap<Integer, String> trcluster_clusterName) throws Exception {
+		HashMap<String,ArrayList<String>> teCluster_developerID = new HashMap<>();
 		ClusterEvaluation eval = getEval();
 
 		for(File developerProfiling : teDeveloperProfiling) {
@@ -295,7 +295,9 @@ public class OnlinePBDP {
 			double[] assignments = eval.getClusterAssignments();
 
 			if(assignments.length > 1) System.out.println("_______________________Emergency_________________");
-			int cluster = (int)assignments[0];
+			int wekaCluster = (int)assignments[0];
+			
+			String cluster = trcluster_clusterName.get(wekaCluster);
 
 			ArrayList<String> teDeveloperList;
 			if(teCluster_developerID.containsKey(cluster)) {
@@ -425,7 +427,7 @@ public class OnlinePBDP {
 			for(int trcluster : trclusters) {
 				String clusterName = Integer.toString(trcluster);
 				if(numOfKey < twentyPercentOfLargestKey) {
-					clusterName = "baseline";
+					clusterName = "PBDPbaseline";
 				}
 				trcluster_clusterName.put(trcluster,clusterName);
 			}
@@ -434,11 +436,11 @@ public class OnlinePBDP {
 		return trcluster_clusterName;
 	}
 
-	private void makeArffFileInEachTestClustering(HashMap<Integer, ArrayList<String>> cluster_developerID,
+	private void makeArffFileInEachTestClustering(HashMap<String, ArrayList<String>> cluster_developerID,
 			HashMap<String, ArrayList<String>> tr_developerID_commitHashs, ArrayList<String> attributeLineList, HashMap<String, HashMap<String, String>> commitHash_key_data, String outputPath, int run) throws Exception {
 
 
-		for(int cluster : cluster_developerID.keySet()) {
+		for(String cluster : cluster_developerID.keySet()) {
 			File newDeveloperArff = new File(outputPath +File.separator+"run_"+run+"_cluster_"+cluster+"_te.arff");
 			// ./run_1_cluster_2_tr.arff
 			StringBuffer newContentBuf = new StringBuffer();
