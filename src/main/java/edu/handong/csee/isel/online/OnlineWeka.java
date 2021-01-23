@@ -335,7 +335,7 @@ public class OnlineWeka {
 			te_b.add(attStats_te.nominalCounts[1]);
 			te_c.add(attStats_te.totalCount);
 			
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("random"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;

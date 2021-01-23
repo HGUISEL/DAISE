@@ -36,6 +36,7 @@ public class OnlineMain {
 	boolean accumulate;
 	boolean isMinCommit;
 	boolean isBaseLine;
+	boolean bow;
 	boolean verbose;
 	boolean help;
 	static BaseSetting baseSet;
@@ -703,7 +704,11 @@ public class OnlineMain {
 		String[] extratPDPargs = new String[3];
 		extratPDPargs[0] = arffPath;
 		extratPDPargs[1] = directoryPath;
-		extratPDPargs[2] = "o";
+		if(bow == false) {
+			extratPDPargs[2] = "o";
+		}else {
+			extratPDPargs[2] = "bow";
+		}
 
 		return extratPDPargs;
 	}
@@ -895,7 +900,7 @@ public class OnlineMain {
 	private String parsingKey(String line, String firstKey, int indexOfKey) {
 		String key = null;
 		if((line.contains(","+indexOfKey+" "))) {
-			key = line.substring(line.lastIndexOf(Integer.toString(indexOfKey)),line.lastIndexOf("}"));
+			key = line.substring(line.lastIndexOf(","+Integer.toString(indexOfKey)),line.lastIndexOf("}"));
 			key = key.substring(key.lastIndexOf(" ")+1,key.length());
 		}else {
 			key = firstKey;
@@ -1056,7 +1061,9 @@ public class OnlineMain {
 			accumulate = cmd.hasOption("a");
 			isMinCommit = cmd.hasOption("m");
 			isBaseLine = cmd.hasOption("bl");
+			bow = cmd.hasOption("bow");
 			help = cmd.hasOption("h");
+			
 
 		} catch (Exception e) {
 			printHelp(options);
@@ -1141,6 +1148,11 @@ public class OnlineMain {
 		options.addOption(Option.builder("bl").longOpt("isBaseLine")
 				.desc("Do baseLine weka classify")
 				.argName("isBaseLine?")
+				.build());
+		
+		options.addOption(Option.builder("bow").longOpt("NoBagOfWords")
+				.desc("Remove the metric of Bag Of Words")
+				.argName("NoBagOfWords")
 				.build());
 
 		options.addOption(Option.builder("h").longOpt("help")
