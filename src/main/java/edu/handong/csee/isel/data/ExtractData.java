@@ -17,6 +17,7 @@ public class ExtractData {
 	static ArrayList<String> kameiAttr;
 	static ArrayList<String> OnlineAttr;
 	static ArrayList<String> PDPAttr;
+	static ArrayList<String> noBOWonlineAttr;
 	
 	private final static String attribetePatternStr = "@attribute\\s(.+)\\s[\\{|[a-zA-Z]+]";
 	private final static Pattern attribetePattern = Pattern.compile(attribetePatternStr);
@@ -27,17 +28,19 @@ public class ExtractData {
 	/*
 	 * args[0] : input projectName-data.arff path
 	 * args[1] : output path
-	 * args[2] : kamei or pdp or online?
+	 * args[2] : kamei(k)or pdp(p) or online()o or noBOW online(bow)?
 	 */
 
 	public static void main(String[] args) throws Exception {
 		TreeMap<String, String>  kameiAttrIndex = new TreeMap<>();
 		TreeMap<String, String>  PDPAttrIndex = new TreeMap<>();
 		TreeMap<String, String>  onlineAttriIndex = new TreeMap<>();
+		TreeMap<String, String>  noBOWonlineAttriIndex = new TreeMap<>();
 		ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
 		ArrayList<String> dataLineList = new ArrayList<String>();
 		
 		File originArff = new File(args[0]);
+		String mode = args[2];
 		
 		output = args[1];
 		Pattern projectNamePattern = Pattern.compile(".+/(.+)\\.arff");
@@ -47,9 +50,14 @@ public class ExtractData {
 		}
 		System.out.println(args[2]);
 		
-		initKameiMetric();
-		initOnlineMetric();
-		initPDPMetric();
+		if(mode.compareTo("k") == 0)
+			initKameiMetric();		
+		else if (mode.compareTo("p") == 0)
+			initPDPMetric();
+		else if (mode.compareTo("o") == 0)
+			initOnlineMetric();
+		else if (mode.compareTo("bow") == 0)
+			initNoBOWonlineMetric();
 		
 		String content = FileUtils.readFileToString(originArff, "UTF-8");
 		String[] lines = content.split("\n");
@@ -67,14 +75,22 @@ public class ExtractData {
 					Matcher m = attribetePattern.matcher(line);
 					while(m.find()) {
 //						System.out.println(m.group(1));
-						if(kameiAttr.contains(m.group(1))) {
+						if((mode.compareTo("k") == 0)&&(kameiAttr.contains(m.group(1)))) {
 							kameiAttrIndex.put(Integer.toString(attrIndex),line);
 						}
-						if(!OnlineAttr.contains(m.group(1))) {
+						if((mode.compareTo("o") == 0)&&!(OnlineAttr.contains(m.group(1)))) {
 							onlineAttriIndex.put(Integer.toString(attrIndex),line);
 						}
-						if(!PDPAttr.contains(m.group(1))){
+						if((mode.compareTo("p") == 0)&&!(PDPAttr.contains(m.group(1)))){
 							PDPAttrIndex.put(Integer.toString(attrIndex),line);
+						}
+						
+						if(mode.compareTo("bow") == 0){
+							for(String attr : noBOWonlineAttr) {
+								if(m.group(1).startsWith(attr)) {
+									noBOWonlineAttriIndex.put(Integer.toString(attrIndex),line);
+								}
+							}
 						}
 						
 					}
@@ -83,6 +99,7 @@ public class ExtractData {
 						kameiAttrIndex.put(Integer.toString(attrIndex),line);
 						onlineAttriIndex.put(Integer.toString(attrIndex),line);
 						PDPAttrIndex.put(Integer.toString(attrIndex),line);
+						noBOWonlineAttriIndex.put(Integer.toString(attrIndex),line);
 					}
 					
 					
@@ -112,6 +129,8 @@ public class ExtractData {
 			ExtractPDPmetricFrom(attributeLineList, dataLineList, PDPAttrIndex,"p");
 		else if (args[2].compareTo("o") == 0)
 			ExtractPDPmetricFrom(attributeLineList, dataLineList, onlineAttriIndex,"o");
+		else if (args[2].compareTo("bow") == 0)
+			ExtractPDPmetricFrom(attributeLineList, dataLineList, noBOWonlineAttriIndex,"o");
 
 	}
 	
@@ -319,4 +338,27 @@ public class ExtractData {
 				"meta_data-LT"
 				));
 	}
+	
+	static void initNoBOWonlineMetric() {  //not online metrics
+		noBOWonlineAttr = new ArrayList<String>(Arrays.asList(
+				"'meta_data-Modify Lines'",
+				"'meta_data-Add Lines'",
+				"'meta_data-Delete Lines'",
+				"meta_data-numOfBIC",
+				"meta_data-AuthorID",
+				"meta_data-fileAge",
+				"meta_data-SumOfSourceRevision",
+				"meta_data-CommitHour",
+				"meta_data-CommitDate",
+				"meta_data-fileName",
+				"MOV",
+				"INS",
+				"UPD",
+				"DEL",
+				"meta_data-commitTime",
+				"Key",
+				"@@class@@"
+				));
+	}
+	
 }
