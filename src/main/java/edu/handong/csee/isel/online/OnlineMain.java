@@ -34,7 +34,7 @@ public class OnlineMain {
 	String dataPath;
 	String BICpath;
 	boolean accumulate;
-	boolean isMinCommit;
+	int minimumCommitForProfilingParameter;
 	boolean isBaseLine;
 	boolean bow;
 	boolean verbose;
@@ -663,12 +663,8 @@ public class OnlineMain {
 			//compute PBDF
 			OnlinePBDP onlinePBDP = new OnlinePBDP();
 			//set default variable
-			String PBDPpath;
-			if(isMinCommit) {
-				PBDPpath = baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP-M-C"+defaultCluster+File.separator;
-			}else {
-				PBDPpath = baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP-C"+defaultCluster+File.separator;
-			}
+			String PBDPpath = baseSet.OutputPath() +File.separator+baseSet.ProjectName()+"-PBDP-M"+minimumCommitForProfilingParameter+"-C"+defaultCluster+File.separator;
+			
 			onlinePBDP.setOutputPath(PBDPpath);
 			onlinePBDP.setProjectName(baseSet.ProjectName());
 			onlinePBDP.setRunDates(runDates);
@@ -677,7 +673,7 @@ public class OnlineMain {
 			onlinePBDP.setWekaOutputPath(wekaDirectoryPath);
 			onlinePBDP.setDefaultLabel(defaultLabel);
 			onlinePBDP.setDefaultCluster(defaultCluster);
-			onlinePBDP.setMinCommit(isMinCommit);
+			onlinePBDP.setMinCommit(minimumCommitForProfilingParameter);
 			//			call compute PBDP
 			onlinePBDP.profilingBasedDefectPrediction(
 					attributeLineList,
@@ -1058,8 +1054,14 @@ public class OnlineMain {
 				baseSet.setGapDays(0);
 				baseSet.setUpdateDays(0);
 			}
+			
+			if(cmd.hasOption("m")){
+				minimumCommitForProfilingParameter = Integer.parseInt(cmd.getOptionValue("m"));
+			}else {
+				minimumCommitForProfilingParameter = 0;
+			}
+			
 			accumulate = cmd.hasOption("a");
-			isMinCommit = cmd.hasOption("m");
 			isBaseLine = cmd.hasOption("bl");
 			bow = cmd.hasOption("bow");
 			help = cmd.hasOption("h");
@@ -1142,6 +1144,7 @@ public class OnlineMain {
 		
 		options.addOption(Option.builder("m").longOpt("isMincommit")
 				.desc("Are the minCommit exist.")
+				.hasArg()
 				.argName("minCommit?")
 				.build());
 		

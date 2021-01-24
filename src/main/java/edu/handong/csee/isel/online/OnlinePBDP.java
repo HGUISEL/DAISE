@@ -34,7 +34,7 @@ public class OnlinePBDP {
 	String projectName;
 	String referencePath;
 	boolean accumulate;
-	boolean isMinCommit;
+	int minimumCommitForProfilingParameter;
 	int run = 0;
 
 	ArrayList<RunDate> runDates;
@@ -74,7 +74,7 @@ public class OnlinePBDP {
 			HashMap<String,String> commitHash_developer) throws Exception {
 		System.out.println();
 		System.out.println("######################################################################################");
-		System.out.println("###        Start Online PBDP2   |   DefaultCluster = "+defaultCluster+"    |   isMinCommit = "+isMinCommit+"   ###");
+		System.out.println("###        Start Online PBDP2   |   DefaultCluster = "+defaultCluster+"    |   isMinCommit = "+minimumCommitForProfilingParameter+"   ###");
 		System.out.println("######################################################################################");
 		System.out.println();
 
@@ -95,8 +95,8 @@ public class OnlinePBDP {
 			RunningData runningData = new RunningData();
 			
 			numOfCluster = 0;
-			if(isMinCommit) {
-				minCommit = 10;
+			if(minimumCommitForProfilingParameter != 0) {
+				minCommit = minimumCommitForProfilingParameter;
 			}else {
 				minCommit = 0;
 			}
@@ -144,7 +144,7 @@ public class OnlinePBDP {
 					trClusteringDeveloperID.addAll(devID);
 				}
 				
-				if(isMinCommit == true) {
+				if(minimumCommitForProfilingParameter != 0) {
 					if(BeforeNumOfDeveloper == trClusteringDeveloperID.size()) {
 						if(minCommit < 30){
 							minCommit++;
@@ -175,7 +175,7 @@ public class OnlinePBDP {
 				
 				if(defaultCluster != 0) break;
 				
-				if(isMinCommit == true) {
+				if(minimumCommitForProfilingParameter != 0) {
 					if((numOfCluster != 1)) {
 						break;
 					}else if(minCommit == 30){
@@ -728,10 +728,6 @@ public class OnlinePBDP {
 		this.runDates = runDates;
 	}
 
-	public void setMinCommit(int minCommit) {
-		this.minCommit = minCommit;
-	}
-
 	public ClusterEvaluation getEval() {
 		return eval;
 	}
@@ -761,8 +757,8 @@ public class OnlinePBDP {
 	}
 
 
-	public void setMinCommit(boolean isMinCommit) {
-		this.isMinCommit = isMinCommit;
+	public void setMinCommit(int isMinCommit) {
+		this.minimumCommitForProfilingParameter = isMinCommit;
 	}
 	
 	
