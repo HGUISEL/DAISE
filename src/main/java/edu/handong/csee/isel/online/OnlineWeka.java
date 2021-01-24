@@ -32,6 +32,7 @@ public class OnlineWeka {
 	 * args[1] : result path
 	 */
 	static String defaultCluster;
+	static String minimumCommitForProfilingParameter;
 	
 	static ArrayList<String> runs ;
 	static ArrayList<String> clusters ;
@@ -47,6 +48,7 @@ public class OnlineWeka {
 	public void main(String[] args) throws Exception {
 		init();
 		defaultCluster = args[2];
+		minimumCommitForProfilingParameter = args[3];
 		
 		String inputPath = args[0];
 		File dir = new File(inputPath);
@@ -64,12 +66,11 @@ public class OnlineWeka {
 			fileName.add(file.getName());
 		}
 
-		if(projectname.endsWith("PBDP-C"+defaultCluster) || projectname.endsWith("PBDP-M-C"+defaultCluster)) {
+		if(projectname.endsWith("PBDP-C"+defaultCluster) || projectname.endsWith("PBDP-M"+minimumCommitForProfilingParameter+"-C"+defaultCluster)) {
 			onlinePBDP(fileName,args[0]);
 		}else {
 			onlineBaseLine(fileName,args[0]);
 		}
-
 		makeCSVFile(output);
 
 		System.out.println("Finish "+projectname);

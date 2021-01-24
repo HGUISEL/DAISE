@@ -685,7 +685,7 @@ public class OnlineMain {
 
 			//call base line weka  directoryPath
 			if(isBaseLine) {
-				onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath, defaultCluster);
+				onlinePBDP.wekaClassify(directoryPath, wekaDirectoryPath, defaultCluster, minimumCommitForProfilingParameter);
 			}
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");

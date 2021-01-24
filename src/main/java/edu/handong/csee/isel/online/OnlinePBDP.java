@@ -234,7 +234,7 @@ public class OnlinePBDP {
 		Save2CSV(directoryPath,run_runningData);
 		System.out.println(directoryPath);
 		//call PBDP weka directoryPath
-		wekaClassify(directoryPath,wekaOutputPath,defaultCluster);
+		wekaClassify(directoryPath,wekaOutputPath,defaultCluster, minimumCommitForProfilingParameter);
 
 	}
 
@@ -253,12 +253,13 @@ public class OnlinePBDP {
 	}
 
 
-	public void wekaClassify(String path, String wekaOutputPath, int defaultCluster) throws Exception {
+	public void wekaClassify(String path, String wekaOutputPath, int defaultCluster, int minimumCommitForProfilingParameter) throws Exception {
 		String[] WekaArgs = new String[4];
 
 		WekaArgs[0] = path;
 		WekaArgs[1] = wekaOutputPath;
 		WekaArgs[2] = Integer.toString(defaultCluster);
+		WekaArgs[3] = Integer.toString(minimumCommitForProfilingParameter);
 
 		OnlineWeka onlineWeka = new OnlineWeka();
 		onlineWeka.main(WekaArgs);
