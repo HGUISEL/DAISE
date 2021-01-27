@@ -1014,13 +1014,13 @@ public class OnlineMain {
 				baseSet.setOutputPath(outputPath);
 			}
 
-			String wekaOutputPath = cmd.getOptionValue("w");
-			if(wekaOutputPath.endsWith(File.separator)) {
-				wekaOutputPath = wekaOutputPath.substring(0, wekaOutputPath.lastIndexOf(File.separator));
-				baseSet.setWekaOutputPath(wekaOutputPath);
-			}else {
-				baseSet.setWekaOutputPath(wekaOutputPath);
-			}
+//			String wekaOutputPath = cmd.getOptionValue("w");
+//			if(wekaOutputPath.endsWith(File.separator)) {
+//				wekaOutputPath = wekaOutputPath.substring(0, wekaOutputPath.lastIndexOf(File.separator));
+//				baseSet.setWekaOutputPath(wekaOutputPath);
+//			}else {
+//				baseSet.setWekaOutputPath(wekaOutputPath);
+//			}
 			
 			if(cmd.hasOption("c")){
 				defaultCluster = Integer.parseInt(cmd.getOptionValue("c"));
@@ -1100,12 +1100,12 @@ public class OnlineMain {
 				.required()
 				.build());
 
-		options.addOption(Option.builder("w").longOpt("wekaOutput")
-				.desc("weka classify output path. Don't use double quotation marks")
-				.hasArg()
-				.argName("path")
-				.required()
-				.build());
+//		options.addOption(Option.builder("w").longOpt("wekaOutput")
+//				.desc("weka classify output path. Don't use double quotation marks")
+//				.hasArg()
+//				.argName("path")
+//				.required()
+//				.build());
 		//options
 		options.addOption(Option.builder("s").longOpt("startdate")
 				.desc("Start date for collecting training data. Format: \"yyyy-MM-dd HH:mm:ss\"")

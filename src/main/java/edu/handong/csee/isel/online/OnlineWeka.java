@@ -83,7 +83,7 @@ public class OnlineWeka {
 		BufferedWriter evaluationValueWriter;
 		
 		try {
-			confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_CM_"+defaultCluster+".csv"));
+			confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_CM.csv"));
 			CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","TP","FN","FP","TN","class"));
 
 			for(int i = 0; i < runs.size(); i++) {
@@ -118,30 +118,39 @@ public class OnlineWeka {
 					runEV.setTP(algorithm, TP);
 					runEV.setFN(algorithm, FN);
 					runEV.setFP(algorithm, FP);
+					runEV.setTN(algorithm, TN);
 					runEV.setBuggy(algorithm, buggy_tr);
 					runEV.setClean(algorithm, clean_tr);
 					runEV.setTe_buggy(algorithm, buggy_te);
 					runEV.setTe_clean(algorithm, clean_te);
+					if(cluster.equals("PBDPbaseline")) {
+						cluster = "0";
+					}
+					runEV.setClusters(algorithm, Integer.parseInt(cluster));
 				}
 				runEvaluationValue.put(run, runEV);
 			}
-			confusionMatrixcsvPrinter.close();
-			confusionMatrixWriter.close();
 			
 
-			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV_"+defaultCluster+".csv"));
-			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","precision","recall","fMeasure"));			
+//			evaluationValueWriter = new BufferedWriter(new FileWriter(output+"_EV.csv"));
+//			CSVPrinter evaluationValuePrinter = new CSVPrinter(evaluationValueWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)","precision","recall","fMeasure"));			
 
+			int numOfRun = 0;
 			
 			for(String run : runEvaluationValue.keySet()) {
 				Run runEV = runEvaluationValue.get(run);
-				
+				numOfRun ++;
 				
 				for(String algorithm : runEV.getTP().keySet()) {
+					ArrayList<Integer> allClusters = runEV.getClusters().get(algorithm);
+					
+					double averCluster = average(allClusters);
+					double varCluster = var(allClusters);
 					
 					double TP = sum(runEV.getTP().get(algorithm));
 					double FN = sum(runEV.getFN().get(algorithm));
 					double FP = sum(runEV.getFP().get(algorithm));
+					double TN = sum(runEV.getTN().get(algorithm));
 					int buggy = (int)sum(runEV.getBuggy().get(algorithm));
 					int clean = (int)sum(runEV.getClean().get(algorithm));
 					int total = buggy + clean;
@@ -156,7 +165,7 @@ public class OnlineWeka {
 					double recall = TP/(TP + FN);
 					double fMeasure = ((precision * recall)/(precision + recall))*2;
 					
-					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,ratio,total_te,buggy_te,clean_te,ratio_te,precision,recall,fMeasure);
+//					evaluationValuePrinter.printRecord(algorithm,run,total,buggy,clean,ratio,total_te,buggy_te,clean_te,ratio_te,precision,recall,fMeasure);
 					
 					AllRun allRun;
 					if(algorithm_BC.containsKey(algorithm)) {
@@ -168,6 +177,9 @@ public class OnlineWeka {
 						allRun.setTPS((int)TP);
 						allRun.setFNS((int)FN);
 						allRun.setFPS((int)FP);
+						allRun.setTNS((int)TN);
+						allRun.setAverCluster(averCluster);
+						allRun.setVarCluster(varCluster);
 					}else {
 						allRun = new AllRun();
 						allRun.setBuggys_te(buggy_te);
@@ -177,6 +189,9 @@ public class OnlineWeka {
 						allRun.setTPS((int)TP);
 						allRun.setFNS((int)FN);
 						allRun.setFPS((int)FP);
+						allRun.setTNS((int)TN);
+						allRun.setAverCluster(averCluster);
+						allRun.setVarCluster(varCluster);
 						algorithm_BC.put(algorithm, allRun);
 					}
 				}
@@ -192,6 +207,9 @@ public class OnlineWeka {
 				double TPS = allRun.getTPS();
 				double FNS = allRun.getFNS();
 				double FPS = allRun.getFPS();
+				double TNS = allRun.getTNS();
+				double averCluster = allRun.getAverCluster();
+				double varCluster = allRun.getVarCluster();
 				
 				int total = buggys + cleans;
 				float ratio = ((float)buggys/(float)total) * 100;
@@ -202,19 +220,37 @@ public class OnlineWeka {
 				double recall = TPS/(TPS + FNS);
 				double fMeasure = ((precision * recall)/(precision + recall))*2;
 				
-				evaluationValuePrinter.printRecord(algorithm,"Total_Run",total,buggys,cleans,ratio,total_te,buggys_te,cleans_te,ratio_te,precision,recall,fMeasure);
-
+				confusionMatrixcsvPrinter.printRecord("algorithm","defaultCluster","","tr_ratio","te_ratio","tr-te ratio","TP","FN","FP","TN","P","R","F","averClu","varClu");
+				confusionMatrixcsvPrinter.printRecord(algorithm,defaultCluster,"",ratio,ratio_te,ratio-ratio_te,TPS,FNS,FPS,TNS,precision,recall,fMeasure,averCluster,varCluster);
 			}
 
-			evaluationValuePrinter.close();
-			evaluationValueWriter.close();
+//			evaluationValuePrinter.close();
+//			evaluationValueWriter.close();
+			
+			confusionMatrixcsvPrinter.close();
+			confusionMatrixWriter.close();
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 	}
+	
+	private static double var(ArrayList<Integer> allClusters) {
+		double mean = average(allClusters);
+        double temp = 0;
+        
+        for(double a :allClusters)
+            temp += (a-mean)*(a-mean);
+        
+        return temp/(double)(allClusters.size()-1);
+	}
+	
+	private static double average(ArrayList<Integer> allClusters) {
 
+        return sum(allClusters)/(double)allClusters.size();
+	}
+	
 	private static double sum(ArrayList<Integer> arrayList) {
 		int sum = 0;
 		 
@@ -222,8 +258,9 @@ public class OnlineWeka {
 			sum += i;
 		}
 
-		return sum;
+		return (double)sum;
 	}
+	
 	private static void init() {
 		tr_bc_num = new HashMap<>();
 		tr_bc_num.put("buggy", new ArrayList<Integer>());
@@ -444,6 +481,9 @@ class AllRun{
 	int TPS ;
 	int FNS ;
 	int FPS ;
+	int TNS ;
+	double averCluster;
+	double varCluster;
 	
 	AllRun(){
 		buggys = 0;
@@ -453,6 +493,9 @@ class AllRun{
 		TPS = 0;
 		FNS = 0;
 		FPS = 0;
+		TNS = 0;
+		averCluster = 0;
+		varCluster = 0;
 	}
 
 	public int getBuggys() {
@@ -501,8 +544,6 @@ class AllRun{
 		this.clean_te = this.clean_te + clean_te;
 	}
 
-
-
 	public int getTPS() {
 		return TPS;
 	}
@@ -526,7 +567,31 @@ class AllRun{
 	public void setFPS(int fPS) {
 		this.FPS = this.FPS + fPS;
 	}
-	
+
+	public int getTNS() {
+		return TNS;
+	}
+
+	public void setTNS(int tNS) {
+		this.TNS = this.TNS + tNS;
+	}
+
+	public double getAverCluster() {
+		return averCluster;
+	}
+
+	public void setAverCluster(double averCluster) {
+		this.averCluster = averCluster;
+	}
+
+	public double getVarCluster() {
+		return varCluster;
+	}
+
+	public void setVarCluster(double varCluster) {
+		this.varCluster = varCluster;
+	}
+
 }
 
 class Run{
@@ -538,6 +603,8 @@ class Run{
 	HashMap<String,ArrayList<Integer>> clean ;
 	HashMap<String,ArrayList<Integer>> te_buggy ;
 	HashMap<String,ArrayList<Integer>> te_clean ;
+	HashMap<String,ArrayList<Integer>> clusters ;
+	
 	  
 	Run(){
 		this.TP = new HashMap<>();
@@ -548,6 +615,7 @@ class Run{
 		this.clean = new HashMap<>();
 		this.te_buggy = new HashMap<>();
 		this.te_clean = new HashMap<>();
+		this.clusters = new HashMap<>();
 	}
 	
 	
@@ -651,23 +719,15 @@ class Run{
 	public void setTe_clean(String algorithm, int confusionMatrixValue) {
 		OnlineWeka.saveValue(this.te_clean, algorithm, confusionMatrixValue);
 	}
-	
-	
 
 
-//
-//
-//	void saveValue(HashMap<String, ArrayList<Integer>> algo_measure, String algorithm, int confusionMatrixValue) {
-//		ArrayList<Integer> measure;
-//		
-//		if(algo_measure.containsKey(algorithm)) {
-//			measure = algo_measure.get(algorithm);
-//			measure.add(confusionMatrixValue);
-//		}else {
-//			measure = new ArrayList<Integer>();
-//			measure.add(confusionMatrixValue);
-//			algo_measure.put(algorithm, measure);
-//		}
-//	}
+	public HashMap<String, ArrayList<Integer>> getClusters() {
+		return clusters;
+	}
+
+
+	public void setClusters(String algorithm, int cluster) {
+		OnlineWeka.saveValue(this.clusters, algorithm, cluster);
+	}
 
 }
