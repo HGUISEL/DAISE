@@ -261,8 +261,8 @@ public class OnlinePBDP {
 		WekaArgs[2] = Integer.toString(defaultCluster);
 		WekaArgs[3] = Integer.toString(minimumCommitForProfilingParameter);
 
-		OnlineWeka onlineWeka = new OnlineWeka();
-		onlineWeka.main(WekaArgs);
+		OnlineWeka onlineWeka2 = new OnlineWeka();
+		onlineWeka2.main(WekaArgs);
 	}
 
 	private HashMap<String, ArrayList<String>> clusteringTestProfilingDeveloper(ArrayList<File> teDeveloperProfiling, TreeMap<Integer, String> trcluster_clusterName) throws Exception {
