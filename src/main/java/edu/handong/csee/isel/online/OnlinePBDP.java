@@ -31,7 +31,7 @@ import weka.filters.unsupervised.attribute.Remove;
 public class OnlinePBDP {
 	String wekaOutputPath;
 	String outputPath;
-	String projectName;
+	static String projectName;
 	String referencePath;
 	boolean accumulate;
 	int minimumCommitForProfilingParameter;

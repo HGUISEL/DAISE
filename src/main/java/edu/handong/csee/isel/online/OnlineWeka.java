@@ -49,7 +49,7 @@ public class OnlineWeka {
 
 		String inputPath = args[0];
 		String projectname = setProjectName(inputPath); 
-		String output = args[1] +File.separator + projectname;
+		String output = args[1];
 		String defaultCluster = args[2];
 		String minimumCommitForProfilingParameter = args[3];
 
@@ -70,13 +70,13 @@ public class OnlineWeka {
 		
 		if(projectname.endsWith("PBDP-C"+defaultCluster) || projectname.endsWith("PBDP-M"+minimumCommitForProfilingParameter+"-C"+defaultCluster)) {
 			onlinePBDP(fileName,inputPath);
+			makeCSVFile(output,defaultCluster,minimumCommitForProfilingParameter,projectname);
 		}else {
 			averCluster = 0;
 			varCluster = 0;
 			onlineBaseLine(fileName,inputPath);
+			makeCSVFile(output,"baseline","baseline",projectname);
 		}
-		
-		makeCSVFile(output,defaultCluster,minimumCommitForProfilingParameter);
 
 		System.out.println("Finish "+projectname);
 	}
@@ -90,7 +90,7 @@ public class OnlineWeka {
 			String[] str = file.split("_");
 			String run = null;
 			String cluster = null;
-
+			
 			run = str[1];
 			
 			int numOfCluster;
@@ -137,14 +137,24 @@ public class OnlineWeka {
 		return (double)sum;
 	}
 
-	private static void makeCSVFile(String output, String defaultCluster, String minimumCommitForProfilingParameter) {
-
-		BufferedWriter confusionMatrixWriter;
+	private static void makeCSVFile(String output, String defaultCluster, String minimumCommitForProfilingParameter, String projectname) {
 
 		try {
+			BufferedWriter confusionMatrixWriter;
+			File temp = new File(output+File.separator + "Online_result.csv");
+			boolean isFile = temp.isFile();
+			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + "Online_result.csv", true));
+			CSVPrinter AllconfusionMatrixcsvPrinter = null;
+			
+			if(!isFile) {
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","defaultCluster","Mincommit","TP","FN","FP","TN","P","R","F","MCC","tr_ratio","te_ratio","tr-te ratio","averClu","varClu"));
+			}else {
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT);
+			}
+			
 			for(String algorithm : algo_RunCluster.keySet()) {
-
-				confusionMatrixWriter = new BufferedWriter(new FileWriter(output+"_"+algorithm+"_CM.csv"));
+				
+				confusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + projectname +"_"+algorithm+"_CM.csv"));
 				CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","cluster","TP","FN","FP","TN","precision","recall","fMeasure","MCC","AUC","tr_total","tr_buggy","tr_clean","tr_Ratio(%)","te_total","te_buggy","te_clean","te_Ratio(%)"));
 
 
@@ -189,8 +199,6 @@ public class OnlineWeka {
 					double up = (TP*TN)-(FP*FN);
 					double under = (TP + FP) * (TP + FN) * (TN +FP) * (TN+FN);
 					double MCC = up/Math.sqrt(under);
-					
-					System.out.println();
 
 					confusionMatrixcsvPrinter.printRecord(algorithm,run,cluster,(int)TP,(int)FN,(int)FP,(int)TN,precision,recall,fMeasure,MCC,AUC,total_tr,buggy_tr,clean_tr,ratio_tr,total_te,buggy_te,clean_te,ratio_te);
 					
@@ -218,15 +226,16 @@ public class OnlineWeka {
 				double up = (TPs*TNs)-(FPs*FNs);
 				double under = (TPs + FPs) * (TPs + FNs) * (TNs +FPs) * (TNs+FNs);
 				double MCC = up/Math.sqrt(under);
-
-				confusionMatrixcsvPrinter.printRecord("algorithm","defaultCluster","Mincommit","TP","FN","FP","TN","P","R","F","MCC","tr_ratio","te_ratio","tr-te ratio","averClu","varClu");
-				confusionMatrixcsvPrinter.printRecord(algorithm,defaultCluster,minimumCommitForProfilingParameter,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr,ratio_te,ratio_tr-ratio_te,averCluster,varCluster);
+				
+				AllconfusionMatrixcsvPrinter.printRecord(OnlinePBDP.projectName,algorithm,defaultCluster,minimumCommitForProfilingParameter,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr,ratio_te,ratio_tr-ratio_te,averCluster,varCluster);
 
 				confusionMatrixcsvPrinter.close();
 				confusionMatrixWriter.close();
 			}
 			
-
+			AllconfusionMatrixcsvPrinter.close();
+			AllconfusionMatrixWriter.close();
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -267,14 +276,14 @@ public class OnlineWeka {
 			String tr_arff = "run_"+run+"_cluster_"+cluster+"_tr.arff";
 			String te_arff = "run_"+run+"_cluster_"+cluster+"_te.arff";
 			System.out.println("run_"+run+"_cluster_"+cluster);
-			System.out.println();
 
 			//if there is no te or tr file, pass classify
 			if(!(fileName.contains(tr_arff) && fileName.contains(te_arff))) {
 				System.out.println("pass");
 				continue;
 			}
-
+			System.out.println();
+			
 			//if the te and tr files are already classify, pass
 			if(finishClassifyFileNameList.contains(tr_arff) && finishClassifyFileNameList.contains(te_arff)) {
 				continue;
@@ -390,30 +399,10 @@ public class OnlineWeka {
 
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 	}
-	//	private static void onlineBaseLine(ArrayList<String> fileName, String arffFolder) {
-	//
-	//		if(!fileName.contains("Project_Information.txt")) System.exit(0);
-	//
-	//		for(int run = 0; ; run++) {
-	//			if(!(fileName.contains(run+"_tr.arff"))) {
-	//				break;
-	//			}
-	//			System.out.println("run : "+run);
-	//			String tr_arff = run+"_tr.arff";
-	//			String te_arff = run+"_te.arff";
-	//
-	//			runs.add(Integer.toString(run));
-	//			clusters.add("0");
-	//
-	//			classify(tr_arff,te_arff,arffFolder);
-	//
-	//		}
-	//	}
 
 	private String setProjectName(String inputPath) {
 		Pattern projectNamePattern = Pattern.compile(".+/(.+)");
