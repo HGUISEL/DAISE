@@ -18,6 +18,7 @@ public class ExtractData {
 	static ArrayList<String> OnlineAttr;
 	static ArrayList<String> PDPAttr;
 	static ArrayList<String> noBOWonlineAttr;
+	static ArrayList<String> noBOWpdpAttr;
 	
 	private final static String attribetePatternStr = "@attribute\\s(.+)\\s[\\{|[a-zA-Z]+]";
 	private final static Pattern attribetePattern = Pattern.compile(attribetePatternStr);
@@ -36,6 +37,7 @@ public class ExtractData {
 		TreeMap<String, String>  PDPAttrIndex = new TreeMap<>();
 		TreeMap<String, String>  onlineAttriIndex = new TreeMap<>();
 		TreeMap<String, String>  noBOWonlineAttriIndex = new TreeMap<>();
+		TreeMap<String, String>  noBOWpdpAttriIndex = new TreeMap<>();
 		ArrayList<String> attributeLineList = new ArrayList<String>(); //use again
 		ArrayList<String> dataLineList = new ArrayList<String>();
 		
@@ -93,6 +95,14 @@ public class ExtractData {
 							}
 						}
 						
+						if(mode.compareTo("bowP") == 0){
+							for(String attr : noBOWpdpAttr) {
+								if(m.group(1).startsWith(attr)) {
+									noBOWpdpAttriIndex.put(Integer.toString(attrIndex),line);
+								}
+							}
+						}
+						
 					}
 					
 					if(line.startsWith("@attribute Key ")) {
@@ -100,6 +110,7 @@ public class ExtractData {
 						onlineAttriIndex.put(Integer.toString(attrIndex),line);
 						PDPAttrIndex.put(Integer.toString(attrIndex),line);
 						noBOWonlineAttriIndex.put(Integer.toString(attrIndex),line);
+						noBOWpdpAttriIndex.put(Integer.toString(attrIndex),line);
 					}
 					
 					
@@ -131,6 +142,8 @@ public class ExtractData {
 			ExtractPDPmetricFrom(attributeLineList, dataLineList, onlineAttriIndex,"o");
 		else if (args[2].compareTo("bow") == 0)
 			ExtractPDPmetricFrom(attributeLineList, dataLineList, noBOWonlineAttriIndex,"o");
+		else if (args[2].compareTo("bowP") == 0)
+			ExtractPDPmetricFrom(attributeLineList, dataLineList, noBOWpdpAttriIndex,"p");
 
 	}
 	
@@ -344,6 +357,24 @@ public class ExtractData {
 				"'meta_data-Modify Lines'",
 				"'meta_data-Add Lines'",
 				"'meta_data-Delete Lines'",
+				"meta_data-numOfBIC",
+				"meta_data-AuthorID",
+				"meta_data-fileAge",
+				"meta_data-SumOfSourceRevision",
+				"meta_data-CommitHour",
+				"meta_data-CommitDate",
+				"MOV",
+				"INS",
+				"UPD",
+				"DEL",
+				"meta_data-commitTime",
+				"Key",
+				"@@class@@"
+				));
+	}
+	
+	static void initNoBOWpdpMetric() {  //not PDP metrics
+		noBOWpdpAttr = new ArrayList<String>(Arrays.asList(
 				"meta_data-numOfBIC",
 				"meta_data-AuthorID",
 				"meta_data-fileAge",
