@@ -350,7 +350,6 @@ public class ExtractData {
 				"meta_data-SumOfSourceRevision",
 				"meta_data-CommitHour",
 				"meta_data-CommitDate",
-				"meta_data-fileName",
 				"MOV",
 				"INS",
 				"UPD",
