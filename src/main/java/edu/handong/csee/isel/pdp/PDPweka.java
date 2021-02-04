@@ -137,7 +137,7 @@ public class PDPweka {
 			HashMap<String, ArrayList<ArffInformation>> algorithm_MLresult,String projectname) {
 		try {
 			BufferedWriter confusionMatrixWriter;
-			File temp = new File(output+File.separator + "Online_result.csv");
+			File temp = new File(output+File.separator + "PDP_result.csv");
 			boolean isFile = temp.isFile();
 			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + "Online_result.csv", true));
 			CSVPrinter AllconfusionMatrixcsvPrinter = null;
@@ -211,7 +211,7 @@ public class PDPweka {
 				double under = (TPs + FPs) * (TPs + FNs) * (TNs +FPs) * (TNs+FNs);
 				double MCC = up/Math.sqrt(under);
 				
-				AllconfusionMatrixcsvPrinter.printRecord(PDPmain2.projectName,algorithm,defaultCluster,type,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr);
+				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,defaultCluster,type,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr);
 
 				confusionMatrixcsvPrinter.close();
 				confusionMatrixWriter.close();
