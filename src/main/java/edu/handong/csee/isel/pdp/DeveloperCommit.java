@@ -3,23 +3,24 @@ package edu.handong.csee.isel.pdp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class DeveloperCommit {
 	//number of commit
 	//key - data
 	//commit time - commit hash : tree map <string, arrayList>
-	ArrayList<String> commitHashs;
+	TreeSet<String> commitHashs;
 	HashMap<String,String> key_data;
-	TreeMap<String,ArrayList<String>> commitTime_commitHash;
+	TreeMap<String,TreeSet<String>> commitTime_commitHash;
 	
 	public DeveloperCommit() {
-		commitHashs = new ArrayList<>();
+		commitHashs = new TreeSet<>();
 		key_data = new HashMap<>();
 		commitTime_commitHash = new TreeMap<>();
 	}
 	
 
-	public ArrayList<String> getCommitHashs() {
+	public TreeSet<String> getCommitHashs() {
 		return commitHashs;
 	}
 	
@@ -39,17 +40,17 @@ public class DeveloperCommit {
 		this.key_data.put(key, data);
 	}
 
-	public TreeMap<String, ArrayList<String>> getCommitTime_key() {
+	public TreeMap<String, TreeSet<String>> getCommitTime_CommitID() {
 		return commitTime_commitHash;
 	}
 
-	public void setCommitTime_key(String commitTime, String commitHash) {
-		ArrayList<String> keys;
+	public void setCommitTime_CommitID(String commitTime, String commitHash) {
+		TreeSet<String> keys;
 		if(this.commitTime_commitHash.containsKey(commitTime)) {
 			keys = this.commitTime_commitHash.get(commitTime);
 			keys.add(commitHash);
 		}else {
-			keys = new ArrayList<String>();
+			keys = new TreeSet<String>();
 			keys.add(commitHash);
 			this.commitTime_commitHash.put(commitTime, keys);
 		}

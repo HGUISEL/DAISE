@@ -35,17 +35,20 @@ public class PDPweka {
 	 * args[2] : defaultCluster number (0 : auto)
 	 */
 	
+	String inputPath;
+	String projectname;
+	String output;
+	String defaultCluster;
+	String type;
+	String minimumCommit;
+	String totalDeveloper;
+	String preprocessedDeveloper;
+	
+	
 	static HashMap<String,HashMap<Integer,Integer>> tr_bc_num  ;
 	
-	public void main(String[] args) throws Exception {
+	public void main() throws Exception {
 		init();
-		
-		String inputPath = args[0];
-		String projectname = setProjectName(inputPath); 
-		String output = args[1];
-		String defaultCluster = args[2];
-		String type = args[3];
-		String minimumCommit = args[4];
 		
 		File dir = new File(inputPath);
 		File []fileList = dir.listFiles();
@@ -130,11 +133,10 @@ public class PDPweka {
 			}
 		}
 		
-		save2CSV(output,defaultCluster,algorithm_MLresult,projectname,type,minimumCommit);
+		save2CSV(algorithm_MLresult);
 	}
 	
-	private void save2CSV(String output, String defaultCluster,
-			HashMap<String, ArrayList<ArffInformation>> algorithm_MLresult,String projectname, String type, String minimumCommit) {
+	private void save2CSV(HashMap<String, ArrayList<ArffInformation>> algorithm_MLresult) {
 		try {
 			BufferedWriter confusionMatrixWriter;
 			File temp = new File(output+File.separator + "PDP_result.csv");
@@ -143,7 +145,7 @@ public class PDPweka {
 			CSVPrinter AllconfusionMatrixcsvPrinter = null;
 			
 			if(!isFile) {
-				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","type","minimumCommit","defaultCluster","TP","FN","FP","TN","P","R","F","MCC","tr_ratio"));
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","type","TP","FN","FP","TN","P","R","F","MCC","tr_ratio","minimumCommit","defaultCluster","totalNumDev","NumDev"));
 			}else {
 				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT);
 			}
@@ -211,7 +213,7 @@ public class PDPweka {
 				double under = (TPs + FPs) * (TPs + FNs) * (TNs +FPs) * (TNs+FNs);
 				double MCC = up/Math.sqrt(under);
 				
-				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,type,minimumCommit,defaultCluster,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr);
+				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,type,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr,minimumCommit,defaultCluster,totalDeveloper,preprocessedDeveloper);
 
 				confusionMatrixcsvPrinter.close();
 				confusionMatrixWriter.close();
@@ -242,6 +244,72 @@ public class PDPweka {
 		m.find();
 		return m.group(1);
 	}
+
+	protected String getInputPath() {
+		return inputPath;
+	}
+
+	protected void setInputPath(String inputPath) {
+		this.inputPath = inputPath;
+	}
+
+	protected String getProjectname() {
+		return projectname;
+	}
+
+	protected void setProjectname(String projectname) {
+		this.projectname = projectname;
+	}
+
+	protected String getOutput() {
+		return output;
+	}
+
+	protected void setOutput(String output) {
+		this.output = output;
+	}
+
+	protected String getDefaultCluster() {
+		return defaultCluster;
+	}
+
+	protected void setDefaultCluster(String defaultCluster) {
+		this.defaultCluster = defaultCluster;
+	}
+
+	protected String getType() {
+		return type;
+	}
+
+	protected void setType(String type) {
+		this.type = type;
+	}
+
+	protected String getMinimumCommit() {
+		return minimumCommit;
+	}
+
+	protected void setMinimumCommit(String minimumCommit) {
+		this.minimumCommit = minimumCommit;
+	}
+
+	protected String getTotalDeveloper() {
+		return totalDeveloper;
+	}
+
+	protected void setTotalDeveloper(String totalDeveloper) {
+		this.totalDeveloper = totalDeveloper;
+	}
+
+	protected String getPreprocessedDeveloper() {
+		return preprocessedDeveloper;
+	}
+
+	protected void setPreprocessedDeveloper(String preprocessedDeveloper) {
+		this.preprocessedDeveloper = preprocessedDeveloper;
+	}
+	
+	
 
 }
 
