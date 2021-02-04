@@ -185,6 +185,7 @@ public class PDPmain {
 			
 			//save total number of developer
 			int numOfDeveloper = developerInformation.size();
+			System.out.println("totalDev : "+numOfDeveloper);
 			
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer = new TreeMap<>(Collections.reverseOrder());
 			Set<Map.Entry<String, DeveloperCommit>> entries = developerInformation.entrySet();
@@ -204,9 +205,19 @@ public class PDPmain {
 				}
 			}
 			
-			ArrayList<String> developerIDWithOver100Commits = selectTopTenDeveloper(numOfCommit_developer);
+			ArrayList<String> developerIDAboveMinimumCommit = parseDeveloperAboveMinimumCommit(numOfCommit_developer);
+
+			HashMap<String,ArrayList<String>> developerID_MinimumCommitID = selectData(developerInformation,developerIDAboveMinimumCommit);
 			
-			HashMap<String,ArrayList<String>> developerID_100commitHashInstances = selectData(developerInformation,developerIDWithOver100Commits);
+			int numOfDeveloperMincommit = developerID_MinimumCommitID.size();
+			System.out.println("mincommitDev : "+numOfDeveloperMincommit);
+			
+//			for(String developerID : developerID_100commitHashInstances.keySet()) {
+//				ArrayList<String> commit = developerID_100commitHashInstances.get(developerID);
+//				System.out.println(developerID);
+//				System.out.println(commit.size());
+//				System.out.println();
+//			}
 			
 			//save real baseline
 			File baselineArff = new File(directoryPath+File.separator+"baselineArff");
@@ -224,9 +235,9 @@ public class PDPmain {
 				baselineBuf.append(line + "\n");
 			}
 
-			for(String developerID : developerID_100commitHashInstances.keySet()) {
+			for(String developerID : developerID_MinimumCommitID.keySet()) {
 				
-				for(String data : developerID_100commitHashInstances.get(developerID)) {
+				for(String data : developerID_MinimumCommitID.get(developerID)) {
 					baselineBuf.append(data + "\n");
 				}
 			}
@@ -245,7 +256,7 @@ public class PDPmain {
 			HashMap<Integer,String> fileName_developerID = new HashMap<>();
 			int fileName = 0;
 			
-			for(String developerID : developerID_100commitHashInstances.keySet()) {
+			for(String developerID : developerID_MinimumCommitID.keySet()) {
 				File newDeveloperArff = new File(arffDirectoryPath +File.separator+ fileName+".arff");
 				StringBuffer newContentBuf = new StringBuffer();
 				fileName_developerID.put(fileName, developerID);
@@ -257,7 +268,7 @@ public class PDPmain {
 					newContentBuf.append(line + "\n");
 				}
 				
-				for(String data : developerID_100commitHashInstances.get(developerID)) {
+				for(String data : developerID_MinimumCommitID.get(developerID)) {
 					newContentBuf.append(data + "\n");
 				}
 				
@@ -297,7 +308,7 @@ public class PDPmain {
 				}
 				
 				for(String developerID : developers) {
-					for(String data : developerID_100commitHashInstances.get(developerID)) {
+					for(String data : developerID_MinimumCommitID.get(developerID)) {
 						newContentBuf.append(data + "\n");
 					}
 				}
@@ -305,11 +316,11 @@ public class PDPmain {
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 			}
 			//weka  PDParffDirectoryPath  arffDirectoryPath
-			wekaClassify(baselineDirectory,outputPath,"baseline","baseline");
+			wekaClassify(baselineDirectory,outputPath,"baseline","baseline","baseline");
 			System.out.println("Finish baseline");
-			wekaClassify(PDPbaselineDirectory,outputPath,"PDP","PDP");
+			wekaClassify(PDPbaselineDirectory,outputPath,"PDP","PDP",Integer.toString(minimumCommit));
 			System.out.println("Finish PDP");
-			wekaClassify(PDPpbdpDirectory,outputPath,Integer.toString(defaultCluster),"PBDP");
+			wekaClassify(PDPpbdpDirectory,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit));
 			System.out.println("Finish "+projectName);
 			
 			if(verbose) {
@@ -318,13 +329,14 @@ public class PDPmain {
 		}
 	}
 	
-	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type) throws Exception {
-		String[] WekaArgs = new String[4];
+	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit) throws Exception {
+		String[] WekaArgs = new String[5];
 
 		WekaArgs[0] = path;
 		WekaArgs[1] = wekaOutputPath;
 		WekaArgs[2] = defaultCluster;
 		WekaArgs[3] = type;
+		WekaArgs[4] = minimumCommit;
 		
 		PDPweka PDPweka = new PDPweka();
 		PDPweka.main(WekaArgs);
@@ -485,6 +497,7 @@ public class PDPmain {
 		HashMap<String,ArrayList<String>> developerID_100commitHashData = new HashMap<>();
 		
 		for(String developerID : topTenDeveloper) {
+
 			DeveloperCommit developerCommit = developerInformation.get(developerID);
 			
 			TreeMap<String,ArrayList<String>> commitTime_commitHash = developerCommit.getCommitTime_key();
@@ -528,7 +541,7 @@ public class PDPmain {
 		return hundredCommitHash;
 	}
 	
-	private ArrayList<String> selectTopTenDeveloper(TreeMap<Integer, ArrayList<String>> numOfCommit_developer) {
+	private ArrayList<String> parseDeveloperAboveMinimumCommit(TreeMap<Integer, ArrayList<String>> numOfCommit_developer) {
 		ArrayList<String> developerIDWithOver100Commits = new ArrayList<String>();
 		
 		for(int numOfCommit : numOfCommit_developer.keySet()) {

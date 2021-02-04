@@ -45,8 +45,8 @@ public class DeveloperCommit {
 
 	public void setCommitTime_key(String commitTime, String commitHash) {
 		ArrayList<String> keys;
-		if(this.commitTime_commitHash.containsKey(commitHash)) {
-			keys = this.commitTime_commitHash.get(commitHash);
+		if(this.commitTime_commitHash.containsKey(commitTime)) {
+			keys = this.commitTime_commitHash.get(commitTime);
 			keys.add(commitHash);
 		}else {
 			keys = new ArrayList<String>();

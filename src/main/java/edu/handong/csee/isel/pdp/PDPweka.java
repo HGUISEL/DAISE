@@ -36,7 +36,6 @@ public class PDPweka {
 	 */
 	
 	static HashMap<String,HashMap<Integer,Integer>> tr_bc_num  ;
-	String type;
 	
 	public void main(String[] args) throws Exception {
 		init();
@@ -45,7 +44,8 @@ public class PDPweka {
 		String projectname = setProjectName(inputPath); 
 		String output = args[1];
 		String defaultCluster = args[2];
-		type = args[3];
+		String type = args[3];
+		String minimumCommit = args[4];
 		
 		File dir = new File(inputPath);
 		File []fileList = dir.listFiles();
@@ -130,20 +130,20 @@ public class PDPweka {
 			}
 		}
 		
-		save2CSV(output,defaultCluster,algorithm_MLresult,projectname);
+		save2CSV(output,defaultCluster,algorithm_MLresult,projectname,type,minimumCommit);
 	}
 	
 	private void save2CSV(String output, String defaultCluster,
-			HashMap<String, ArrayList<ArffInformation>> algorithm_MLresult,String projectname) {
+			HashMap<String, ArrayList<ArffInformation>> algorithm_MLresult,String projectname, String type, String minimumCommit) {
 		try {
 			BufferedWriter confusionMatrixWriter;
 			File temp = new File(output+File.separator + "PDP_result.csv");
 			boolean isFile = temp.isFile();
-			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + "Online_result.csv", true));
+			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + "PDP_result.csv", true));
 			CSVPrinter AllconfusionMatrixcsvPrinter = null;
 			
 			if(!isFile) {
-				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","defaultCluster","type","TP","FN","FP","TN","P","R","F","MCC","tr_ratio"));
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","type","minimumCommit","defaultCluster","TP","FN","FP","TN","P","R","F","MCC","tr_ratio"));
 			}else {
 				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT);
 			}
@@ -211,7 +211,7 @@ public class PDPweka {
 				double under = (TPs + FPs) * (TPs + FNs) * (TNs +FPs) * (TNs+FNs);
 				double MCC = up/Math.sqrt(under);
 				
-				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,defaultCluster,type,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr);
+				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,type,minimumCommit,defaultCluster,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr);
 
 				confusionMatrixcsvPrinter.close();
 				confusionMatrixWriter.close();
