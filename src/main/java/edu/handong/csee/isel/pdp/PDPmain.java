@@ -28,11 +28,8 @@ import org.apache.commons.io.FileUtils;
 
 import edu.handong.csee.isel.MainDAISE;
 import edu.handong.csee.isel.data.ExtractData;
-import edu.handong.csee.isel.online.OnlineWeka;
 import weka.clusterers.ClusterEvaluation;
-import weka.clusterers.Clusterer;
 import weka.clusterers.EM;
-import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
 import weka.filters.Filter;
@@ -47,20 +44,20 @@ public class PDPmain {
 	boolean bow;
 	boolean verbose;
 	boolean help;
-	
+
 	static String projectName;
 	String referenceFolderPath;
 	ArrayList<String> keyOfFinalArffFile = new ArrayList<String>();
-	
+
 	private final static String firstDeveloperIDPatternStr = ".+\\{'\\s([^,]+)',.+\\}"; 
 	private final static Pattern firstDeveloperIDPattern = Pattern.compile(firstDeveloperIDPatternStr);
 
 	private final static String firstcommitTimePatternStr = "'(\\d\\d\\d\\d-\\d\\d-\\d\\d\\s\\d\\d:\\d\\d:\\d\\d)'";
 	private final static Pattern firstcommitTimePattern = Pattern.compile(firstcommitTimePatternStr);
-	
+
 	private final static String firstKeyPatternStr = "@attribute\\sKey\\s\\{([^,]+)";
 	private final static Pattern firstKeyPattern = Pattern.compile(firstKeyPatternStr);
-	
+
 	private final static String developerIDPatternStr = "((\\?)|' (.+)'),(.+)";;
 	private final static Pattern developerIDPattern = Pattern.compile(developerIDPatternStr);
 
@@ -68,7 +65,7 @@ public class PDPmain {
 		PDPmain main = new PDPmain();
 		main.run(args);
 	}
-	
+
 	private void run(String[] args) throws Exception {
 		Options options = createOptions();
 
@@ -80,7 +77,7 @@ public class PDPmain {
 			String baselineDirectory;
 			String PDPbaselineDirectory;
 			String PDPpbdpDirectory;
-			
+
 			//parsing projectName and reference folder name
 			Pattern pattern = Pattern.compile("(.+)/(.+)-data.arff");
 			Matcher matcher = pattern.matcher(arffPath);
@@ -97,26 +94,26 @@ public class PDPmain {
 				}
 			}
 			referenceFolderPath = referenceFolderPath+File.separator+projectName+"-reference";
-			
+
 			System.out.println(referenceFolderPath);
 			System.out.println(projectName);
-			
+
 			//mk result directory
 			File PDPDir = new File(outputPath +File.separator+projectName+"-PDP"+File.separator);
 			String directoryPath = PDPDir.getAbsolutePath();
 			PDPDir.mkdir();
-			
+
 			//init
 			ArrayList<String> attributeLineList = new ArrayList<>();
 			ArrayList<String> dataLineList = new ArrayList<>();
-			
+
 			//(1) read final arff file and save only PDP metrics (include commitTime data .arff)
 			ExtractData.main(extratPDPargs(arffPath,directoryPath));
 			String PDPMetricArffPath = directoryPath+File.separator+projectName+"-data-PDP.arff";
-			
+
 			String content = FileUtils.readFileToString(new File(PDPMetricArffPath), "UTF-8");
 			String[] lines = content.split("\n");
-			
+
 			//use this value when parsing developerID and commitTime in data line
 			String firstDeveloperID = null;
 			int indexOfDeveloperID = 0;
@@ -124,7 +121,7 @@ public class PDPmain {
 			int indexOfCommitTime = 0;
 			String firstKey = null;
 			int indexOfKey = 0;
-			
+
 			boolean dataPart = false;
 			for (String line : lines) {
 				if (dataPart) {
@@ -157,8 +154,8 @@ public class PDPmain {
 					}
 				}
 			}
-			
-			
+
+
 			HashMap<String,DeveloperCommit> developerInformation = new HashMap<>();
 
 			for(String line : dataLineList) {
@@ -168,7 +165,7 @@ public class PDPmain {
 				String commitHash = key.substring(0,key.indexOf("-"));
 				String data = parsingDataLine(line,indexOfCommitTime,indexOfKey);
 				DeveloperCommit developerCommit;
-				
+
 				if(developerInformation.containsKey(developerID)) {
 					developerCommit = developerInformation.get(developerID);
 					developerCommit.setCommitHashs(commitHash);
@@ -182,14 +179,16 @@ public class PDPmain {
 					developerInformation.put(developerID, developerCommit);
 				}
 			}
-			
+
 			//save total number of developer
 			int totalNumOfDeveloper = developerInformation.size();
 			System.out.println("total dev : "+totalNumOfDeveloper);
-			
+
+
+			//count the number of commit each developer
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer = new TreeMap<>(Collections.reverseOrder());
 			Set<Map.Entry<String, DeveloperCommit>> entries = developerInformation.entrySet();
-			
+
 			for (Map.Entry<String,DeveloperCommit> entry : entries) {
 				String developerID = entry.getKey();
 				int NumOfcommit = entry.getValue().getContCommit();
@@ -204,32 +203,25 @@ public class PDPmain {
 					numOfCommit_developer.put(NumOfcommit, developerIDs);
 				}
 			}
-			
+
+			//Save developers with at least minimum commi
 			ArrayList<String> developerIDAboveMinimumCommit = parseDeveloperAboveMinimumCommit(numOfCommit_developer);
 
 			HashMap<String,ArrayList<String>> developerID_Instances = selectData(developerInformation,developerIDAboveMinimumCommit);
-			
+
 			int preprocessedDeveloper = developerID_Instances.size();
 			System.out.println("mincommitDev : "+preprocessedDeveloper);
-			
-//			System.exit(0);
-			
-//			for(String developerID : developerID_100commitHashInstances.keySet()) {
-//				ArrayList<String> commit = developerID_100commitHashInstances.get(developerID);
-//				System.out.println(developerID);
-//				System.out.println(commit.size());
-//				System.out.println();
-//			}
-			
+
+
 			//save real baseline
 			File baselineArff = new File(directoryPath+File.separator+"baselineArff");
 			String baselinePath = baselineArff.getAbsolutePath();
 			baselineArff.mkdir();
 			baselineDirectory = baselinePath;
-			
+
 			File baselineFileArff = new File(baselinePath +File.separator+ projectName +"_baseline.arff");
 			StringBuffer baselineBuf = new StringBuffer();
-			
+
 			//write attribute
 			for (String line : attributeLineList) {
 				if(line.startsWith("@attribute meta_data-commitTime")) continue;
@@ -242,19 +234,19 @@ public class PDPmain {
 					baselineBuf.append(data + "\n");
 				}
 			}
-			
+
 			FileUtils.write(baselineFileArff, baselineBuf.toString(), "UTF-8");
-			
+
 			System.out.println("Success saveing baseline");
-			
-			
+
+
 			//Save PDP arff file
 			File developerArff = new File(directoryPath+File.separator+"developerArff");
 			String arffDirectoryPath = developerArff.getAbsolutePath();
 			developerArff.mkdir();
 			PDPbaselineDirectory = arffDirectoryPath;
 			int fileName = 0;
-			
+
 			for(String developerID : developerID_Instances.keySet()) {
 				File newDeveloperArff = new File(arffDirectoryPath +File.separator+ fileName+".arff");
 				StringBuffer newContentBuf = new StringBuffer();
@@ -265,52 +257,47 @@ public class PDPmain {
 					if(line.startsWith("@attribute Key {")) continue;
 					newContentBuf.append(line + "\n");
 				}
-				
+
 				for(String data : developerID_Instances.get(developerID)) {
 					newContentBuf.append(data + "\n");
 				}
-				
+
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 				fileName++;
 			}
-			
+
 			System.out.println("Success saveing arff file of minimum developer features");
-			
+
 			//PBDP
 			HashMap<Integer,ArrayList<String>> cluster_developer;
 			cluster_developer = clusteringDeveloper(keyOfFinalArffFile);
 			defaultCluster = cluster_developer.size();
-//			
-//			for(int cluster : cluster_developer.keySet()) {
-//				ArrayList<String> developer = cluster_developer.get(cluster);
-//				System.out.println(developer);
-//			}
-//			
+
 			//save the result
 			File PDPdeveloperArff = new File(directoryPath+File.separator+"PBDPdeveloperArff");
 			String PDParffDirectoryPath = PDPdeveloperArff.getAbsolutePath();
 			PDPdeveloperArff.mkdir();
 			PDPpbdpDirectory = PDParffDirectoryPath;
-			
+
 			for(int cluster : cluster_developer.keySet()) {
 				ArrayList<String> developers = cluster_developer.get(cluster);
-				
+
 				File newDeveloperArff = new File(PDParffDirectoryPath +File.separator+cluster+".arff");
 				StringBuffer newContentBuf = new StringBuffer();
-				
+
 				//write attribute
 				for (String line : attributeLineList) {
 					if(line.startsWith("@attribute meta_data-commitTime")) continue;
 					if(line.startsWith("@attribute Key {")) continue;
 					newContentBuf.append(line + "\n");
 				}
-				
+
 				for(String developerID : developers) {
 					for(String data : developerID_Instances.get(developerID)) {
 						newContentBuf.append(data + "\n");
 					}
 				}
-				
+
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 			}
 			//weka  PDParffDirectoryPath  arffDirectoryPath
@@ -320,15 +307,15 @@ public class PDPmain {
 			System.out.println("Finish PDP");
 			wekaClassify(PDPpbdpDirectory,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper));
 			System.out.println("Finish "+projectName);
-			
+
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 			}
 		}
 	}
-	
+
 	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit, String totalNumOfDeveloper, String preprocessedDeveloper) throws Exception {
-		
+
 		PDPweka PDPweka = new PDPweka();
 		PDPweka.setInputPath(path);
 		PDPweka.setProjectname(PDPmain.projectName);
@@ -340,7 +327,7 @@ public class PDPmain {
 		PDPweka.setPreprocessedDeveloper(preprocessedDeveloper);
 		PDPweka.main();
 	}
-	
+
 	private HashMap<Integer,ArrayList<String>> clusteringDeveloper(ArrayList<String> keyOfFinalArffFile) throws Exception {
 		HashMap<Integer,ArrayList<String>> cluster_developer = new HashMap<>();
 
@@ -348,27 +335,27 @@ public class PDPmain {
 		//read meta data csv file and save only 100commits
 		String profilingMetadatacsvPath = makeCsvFile_HundredCommitFromTopTenDeveloper(keyOfFinalArffFile);
 		File developerProfiling = new File(collectingDeveloperProfilingMetrics(profilingMetadatacsvPath));
-		
-			//clustering developer using weka EM algorithm
+
+		//clustering developer using weka EM algorithm
 		CSVLoader loader = new CSVLoader();
 		loader.setSource(developerProfiling);
 
 		Instances data = loader.getDataSet();
-		
-			
+
+
 		int[] toSelect = new int[data.numAttributes()-1];
-		
+
 		for (int i = 0, j = 1; i < data.numAttributes()-1; i++,j++) {
 			toSelect[i] = j;
 		}
-			//delete developer ID column of CSV file
+		//delete developer ID column of CSV file
 		Remove removeFilter = new Remove();
 		removeFilter.setAttributeIndicesArray(toSelect);
 		removeFilter.setInvertSelection(true);
 		removeFilter.setInputFormat(data);
 		Instances newData = Filter.useFilter(data, removeFilter);
 
-			//apply EM clustering algorithm
+		//apply EM clustering algorithm
 		EM em = new EM();
 		if(defaultCluster != 0) {
 			em.setNumClusters(defaultCluster); //option
@@ -398,21 +385,21 @@ public class PDPmain {
 		ClusterEvaluation eval = new ClusterEvaluation();
 		eval.setClusterer(em);
 		eval.evaluateClusterer(newData);
-		
+
 		System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
-		
+
 		if(eval.getNumClusters() == 1) {
 			em.setNumClusters(2);
 			em.buildClusterer(newData);
-			
+
 			eval = new ClusterEvaluation();
 			eval.setClusterer(em);
 			eval.evaluateClusterer(newData);
-			
+
 			System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
 		}
-		
-		
+
+
 		double[] assignments = eval.getClusterAssignments();
 
 		for(int i = 0; i < newData.size(); i++) {
@@ -438,7 +425,7 @@ public class PDPmain {
 		}
 		return cluster_developer;
 	}
-	
+
 	private int findIndex(String instance, ArrayList<String> developerInstanceCSV) {
 		for(int i = 0; i < developerInstanceCSV.size(); i++) {
 			if(developerInstanceCSV.get(i).equals(instance)) {
@@ -447,7 +434,7 @@ public class PDPmain {
 		}
 		return 1000;
 	}
-	
+
 	private String collectingDeveloperProfilingMetrics(String path) throws Exception {
 		String[] DAISEargs = new String[4];
 
@@ -462,12 +449,12 @@ public class PDPmain {
 	}
 
 	private String makeCsvFile_HundredCommitFromTopTenDeveloper(ArrayList<String> keyOfFinalArffFile) {
-			
+
 		try {
 			//read csv
 			Reader in = new FileReader(referenceFolderPath+File.separator+projectName+"_Label.csv");
 			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
-			
+
 			//save csv
 			String resultCSVPath = referenceFolderPath+File.separator+projectName+"_PDP.csv";
 			BufferedWriter writer = new BufferedWriter(new FileWriter( new File(resultCSVPath)));
@@ -480,24 +467,23 @@ public class PDPmain {
 					csvPrinter.printRecord(metrics.getIsBuggy(),metrics.getModify_Lines(),metrics.getAdd_Lines(),metrics.getDelete_Lines(),metrics.getDistribution_modified_Lines(),metrics.getNumOfBIC(),metrics.getAuthorID(),metrics.getFileAge(),metrics.getSumOfSourceRevision(),metrics.getSumOfDeveloper(),metrics.getCommitHour(),metrics.getCommitDate(),metrics.getAGE(),metrics.getNumOfSubsystems(),metrics.getNumOfDirectories(),metrics.getNumOfFiles(),metrics.getNUC(),metrics.getDeveloperExperience(),metrics.getREXP(),metrics.getSEXP(),metrics.getLT(),metrics.getCommitTime(),key);
 				}
 			}
-			
+
 			csvPrinter.close();
 			return resultCSVPath;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
 	}
 
-	
+
 	private HashMap<String, ArrayList<String>> selectData(HashMap<String, DeveloperCommit> developerInformation, ArrayList<String> topTenDeveloper) {
 		HashMap<String,ArrayList<String>> developerID_Instances = new HashMap<>();
-		
+
 		for(String developerID : topTenDeveloper) {
 
 			DeveloperCommit developerCommit = developerInformation.get(developerID);
-			
+
 			TreeMap<String,TreeSet<String>> commitTime_commitHash = developerCommit.getCommitTime_CommitID();
 			HashMap<String,String> key_data = developerCommit.getKey_data();
 
@@ -516,7 +502,7 @@ public class PDPmain {
 		}
 		return developerID_Instances;
 	}
-	
+
 	private TreeSet<String> selecthundredCommitHash(TreeMap<String, TreeSet<String>> commitTime_commitHash) {
 		ArrayList<String> minimumCommitHash = new ArrayList<String>();
 		Set<Map.Entry<String, TreeSet<String>>> entries = commitTime_commitHash.entrySet();
@@ -535,23 +521,23 @@ public class PDPmain {
 				break;
 			}
 		}
-        TreeSet<String> ts = new TreeSet<String>(minimumCommitHash);
+		TreeSet<String> ts = new TreeSet<String>(minimumCommitHash);
 
 		return ts;
 	}
-	
+
 	private ArrayList<String> parseDeveloperAboveMinimumCommit(TreeMap<Integer, ArrayList<String>> numOfCommit_developer) {
 		ArrayList<String> developerIDWithOverMinCommits = new ArrayList<String>();
-		
+
 		for(int numOfCommit : numOfCommit_developer.keySet()) {
 			if(numOfCommit < minimumCommit) break;
-			
+
 			ArrayList<String> developer = numOfCommit_developer.get(numOfCommit);
 			developerIDWithOverMinCommits.addAll(developer);
 		}
 		return developerIDWithOverMinCommits;
 	}
-	
+
 	private String parsingDataLine(String line, int indexOfCommitTime,int indexOfKey) {
 		if((line.contains(","+indexOfKey+" "))) {
 			if((line.contains(","+indexOfCommitTime+" "))) { //index previous,index commitTime, index key} 
@@ -573,7 +559,7 @@ public class PDPmain {
 			}
 		}
 	}
-	
+
 	private String parsingKey(String line, String firstKey, int indexOfKey) {
 		String key = null;
 		if((line.contains(","+indexOfKey+" "))) {
@@ -585,7 +571,7 @@ public class PDPmain {
 
 		return key;
 	}
-	
+
 	private String parsingCommitTime(String line, String firstCommitTime, int indexOfCommitTime) {
 		if((line.contains(","+indexOfCommitTime+" "))) {
 			String commitTime = line.substring(line.lastIndexOf(indexOfCommitTime+" '"),line.lastIndexOf("'"));
@@ -595,7 +581,7 @@ public class PDPmain {
 			return firstCommitTime;
 		}
 	}
-	
+
 	private String parsingDevloperID(String line, String firstDeveloperID, int indexOfDeveloperID) {
 
 		if((line.contains(","+indexOfDeveloperID+" "))) {
@@ -614,16 +600,16 @@ public class PDPmain {
 
 		return null;
 	}
-	
+
 	private String rename(String adeveloper) {
 		if(adeveloper.startsWith("' ")) {
 			adeveloper = adeveloper.substring(2,adeveloper.lastIndexOf("'"));
 		}
 		return adeveloper;
 	}
-	
+
 	private String[] extratPDPargs(String arffPath, String directoryPath) {
-		
+
 		String[] extratPDPargs = new String[3];
 		extratPDPargs[0] = arffPath;
 		extratPDPargs[1] = directoryPath;
@@ -632,12 +618,12 @@ public class PDPmain {
 		}else {
 			extratPDPargs[2] = "bow";
 		}
-		
+
 		return extratPDPargs;
 	}
-	
-	
-	
+
+
+
 	private boolean parseOptions(Options options, String[] args) {
 		CommandLineParser parser = new DefaultParser();
 
@@ -648,19 +634,19 @@ public class PDPmain {
 			if(outputPath.endsWith(File.separator)) {
 				outputPath = outputPath.substring(0, outputPath.lastIndexOf(File.separator));
 			}
-			
+
 			if(cmd.hasOption("c")){
 				defaultCluster = Integer.parseInt(cmd.getOptionValue("c"));
 			}else {
 				defaultCluster = 0;
 			}
-			
+
 			if(cmd.hasOption("m")){
 				minimumCommit = Integer.parseInt(cmd.getOptionValue("m"));
 			}else {
 				minimumCommit = 100;
 			}
-			
+
 			isBaseLine = cmd.hasOption("bl");
 			bow = cmd.hasOption("bow");
 			help = cmd.hasOption("h");
@@ -672,7 +658,7 @@ public class PDPmain {
 
 		return true;
 	}
-	
+
 	private Options createOptions() {
 		Options options = new Options();
 
@@ -690,7 +676,7 @@ public class PDPmain {
 				.argName("path")
 				.required()
 				.build());
-		
+
 		options.addOption(Option.builder("c").longOpt("cluster")
 				.desc("The number of cluster. Format: int")
 				.hasArg()
@@ -700,17 +686,17 @@ public class PDPmain {
 		options.addOption(Option.builder("h").longOpt("help")
 				.desc("Help")
 				.build());
-		
+
 		options.addOption(Option.builder("bl").longOpt("isBaseLine")
 				.desc("Do baseLine weka classify")
 				.argName("isBaseLine?")
 				.build());
-		
+
 		options.addOption(Option.builder("bow").longOpt("NoBagOfWords")
 				.desc("Remove the metric of Bag Of Words")
 				.argName("NoBagOfWords")
 				.build());
-		
+
 		options.addOption(Option.builder("m").longOpt("minmumCommit")
 				.desc("Set the number of minmumCommit.")
 				.hasArg()
@@ -727,5 +713,5 @@ public class PDPmain {
 		String footer = "\nPlease report issues at https://github.com/HGUISEL/DAISE/issues";
 		formatter.printHelp("DAISE", header, options, footer, true);
 	}
-	
+
 }
