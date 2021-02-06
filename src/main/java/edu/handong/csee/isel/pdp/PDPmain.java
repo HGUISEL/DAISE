@@ -5,8 +5,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Reader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +44,7 @@ public class PDPmain {
 	String outputPath;
 	int defaultCluster;
 	int minimumCommit;
+	int startGap;
 	boolean isBaseLine;
 	boolean bow;
 	boolean verbose;
@@ -101,6 +106,9 @@ public class PDPmain {
 			//mk result directory
 			File PDPDir = new File(outputPath +File.separator+projectName+"-PDP"+File.separator);
 			String directoryPath = PDPDir.getAbsolutePath();
+			if(PDPDir.isDirectory()) {
+				deleteFile(directoryPath);
+			}
 			PDPDir.mkdir();
 
 			//init
@@ -155,17 +163,45 @@ public class PDPmain {
 				}
 			}
 
-
-			HashMap<String,DeveloperCommit> developerInformation = new HashMap<>();
+			//save commitTime for find start date of project
+			TreeSet<String> commitTimes = new TreeSet<>();
+			TreeSet<String> commitHashs = new TreeSet<>();
 
 			for(String line : dataLineList) {
-				String developerID = parsingDevloperID(line,firstDeveloperID,indexOfDeveloperID);
 				String commitTime = parsingCommitTime(line,firstCommitTime,indexOfCommitTime);
+				String key = parsingKey(line,firstKey,indexOfKey);
+				String commitHash = key.substring(0,key.indexOf("-"));
+
+				commitTimes.add(commitTime);
+				commitHashs.add(commitHash);
+			}
+			
+			//set start gap
+			String firstCommitDate = commitTimes.first();
+			String lastCommitDate = commitTimes.last();
+			System.out.println("firstCommitDate : "+firstCommitDate);
+			System.out.println("lastCommitDate : "+lastCommitDate);
+
+			String startDate = addMonth(firstCommitDate,startGap);
+			System.out.println("startDate : " + startDate);
+			System.out.println("Total number of CommitHash : " + commitHashs.size());
+			System.out.println();
+			
+			//save the information of each instance
+			HashMap<String,DeveloperCommit> developerInformation = new HashMap<>();
+			commitHashs.clear();
+			
+			for(String line : dataLineList) {
+				String commitTime = parsingCommitTime(line,firstCommitTime,indexOfCommitTime);
+				if(!(startDate.compareTo(commitTime)<=0))
+					continue;
+				
+				String developerID = parsingDevloperID(line,firstDeveloperID,indexOfDeveloperID);
 				String key = parsingKey(line,firstKey,indexOfKey);
 				String commitHash = key.substring(0,key.indexOf("-"));
 				String data = parsingDataLine(line,indexOfCommitTime,indexOfKey);
 				DeveloperCommit developerCommit;
-
+				
 				if(developerInformation.containsKey(developerID)) {
 					developerCommit = developerInformation.get(developerID);
 					developerCommit.setCommitHashs(commitHash);
@@ -178,12 +214,23 @@ public class PDPmain {
 					developerCommit.setKey_data(key, data);
 					developerInformation.put(developerID, developerCommit);
 				}
+				commitHashs.add(commitHash);
 			}
+			
+			System.out.println("The number of CommitHash : " + commitHashs.size());
 
 			//save total number of developer
 			int totalNumOfDeveloper = developerInformation.size();
 			System.out.println("total dev : "+totalNumOfDeveloper);
-
+			
+			//smote preprocess
+//			try {
+//				SMOTE smote=new SMOTE();
+//				smote.setInputFormat(Data);
+//				Trains_smote = Filter.useFilter(Data, smote);
+//			}catch(Exception e) {
+//				Trains_smote = Data;
+//			}
 
 			//count the number of commit each developer
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer = new TreeMap<>(Collections.reverseOrder());
@@ -301,11 +348,11 @@ public class PDPmain {
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 			}
 			//weka  PDParffDirectoryPath  arffDirectoryPath
-			wekaClassify(baselineDirectory,outputPath,"baseline","baseline","baseline","baseline","baseline");
+			wekaClassify(baselineDirectory,outputPath,"baseline","baseline","baseline","baseline","baseline",Integer.toString(startGap));
 			System.out.println("Finish baseline");
-			wekaClassify(PDPbaselineDirectory,outputPath,"PDP","PDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper));
+			wekaClassify(PDPbaselineDirectory,outputPath,"PDP","PDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap));
 			System.out.println("Finish PDP");
-			wekaClassify(PDPpbdpDirectory,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper));
+			wekaClassify(PDPpbdpDirectory,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap));
 			System.out.println("Finish "+projectName);
 
 			if(verbose) {
@@ -313,8 +360,43 @@ public class PDPmain {
 			}
 		}
 	}
+	
+	public static void deleteFile(String path) {
+		File deleteFolder = new File(path);
 
-	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit, String totalNumOfDeveloper, String preprocessedDeveloper) throws Exception {
+		if(deleteFolder.exists()){
+			File[] deleteFolderList = deleteFolder.listFiles();
+			
+			for (int i = 0; i < deleteFolderList.length; i++) {
+				if(deleteFolderList[i].isFile()) {
+					deleteFolderList[i].delete();
+				}else {
+					deleteFile(deleteFolderList[i].getPath());
+				}
+				deleteFolderList[i].delete(); 
+			}
+			deleteFolder.delete();
+		}
+	}
+
+	private String addMonth(String commitTime, int month) {
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Calendar cal = Calendar.getInstance();
+		try {
+		Date date;
+			date = format.parse(commitTime);
+		cal.setTime(date);
+		cal.add(Calendar.MONTH, month);		//년 더하기
+		
+		return format.format(cal.getTime());
+		
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		return format.format(cal.getTime());
+	}
+
+	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit, String totalNumOfDeveloper, String preprocessedDeveloper, String startGap) throws Exception {
 
 		PDPweka PDPweka = new PDPweka();
 		PDPweka.setInputPath(path);
@@ -325,6 +407,7 @@ public class PDPmain {
 		PDPweka.setMinimumCommit(minimumCommit);
 		PDPweka.setTotalDeveloper(totalNumOfDeveloper);
 		PDPweka.setPreprocessedDeveloper(preprocessedDeveloper);
+		PDPweka.setStartGap(startGap);
 		PDPweka.main();
 	}
 
@@ -341,7 +424,6 @@ public class PDPmain {
 		loader.setSource(developerProfiling);
 
 		Instances data = loader.getDataSet();
-
 
 		int[] toSelect = new int[data.numAttributes()-1];
 
@@ -486,7 +568,6 @@ public class PDPmain {
 
 			TreeMap<String,TreeSet<String>> commitTime_commitHash = developerCommit.getCommitTime_CommitID();
 			HashMap<String,String> key_data = developerCommit.getKey_data();
-
 			TreeSet<String> minimumCommitHash = selecthundredCommitHash(commitTime_commitHash);
 
 			ArrayList<String> instance = new ArrayList<String>();
@@ -646,6 +727,12 @@ public class PDPmain {
 			}else {
 				minimumCommit = 100;
 			}
+			
+			if(cmd.hasOption("s")){
+				startGap = Integer.parseInt(cmd.getOptionValue("s"));
+			}else {
+				startGap = 6;
+			}
 
 			isBaseLine = cmd.hasOption("bl");
 			bow = cmd.hasOption("bow");
@@ -698,9 +785,15 @@ public class PDPmain {
 				.build());
 
 		options.addOption(Option.builder("m").longOpt("minmumCommit")
-				.desc("Set the number of minmumCommit.")
+				.desc("Set the number of minmumCommit.(default : 100)")
 				.hasArg()
 				.argName("minmumCommit")
+				.build());
+		
+		options.addOption(Option.builder("s").longOpt("startGap")
+				.desc("Set the number of minmumCommit. Format: Month. (default : 6 month)")
+				.hasArg()
+				.argName("startGap")
 				.build());
 
 		return options;

@@ -26,6 +26,8 @@ import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
+import weka.filters.Filter;
+import weka.filters.supervised.instance.SMOTE;
 
 public class PDPweka {
 	
@@ -37,6 +39,7 @@ public class PDPweka {
 	String minimumCommit;
 	String totalDeveloper;
 	String preprocessedDeveloper;
+	String startGap;
 
 	static HashMap<String,HashMap<Integer,Integer>> tr_bc_num  ;
 
@@ -59,11 +62,12 @@ public class PDPweka {
 			DataSource source = new DataSource(inputPath+File.separator+fileName);
 			Instances Data = source.getDataSet();
 			Data.setClassIndex(0);
+			Instances Trains_smote = Data;
 
-			AttributeStats attStats = Data.attributeStats(0);
+			AttributeStats attStats = Trains_smote.attributeStats(0);
 
 			Pattern pattern = Pattern.compile(".+\\{(\\w+),(\\w+)\\}");
-			Matcher m = pattern.matcher(Data.attribute(0).toString());
+			Matcher m = pattern.matcher(Trains_smote.attribute(0).toString());
 			m.find();
 
 			HashMap<Integer,Integer> tr_a = tr_bc_num.get(m.group(1));
@@ -99,11 +103,11 @@ public class PDPweka {
 					classifyModel = new Logistic();
 				}
 
-				classifyModel.buildClassifier(Data);
+				classifyModel.buildClassifier(Trains_smote);
 
-				Evaluation evaluation = new Evaluation(Data);
+				Evaluation evaluation = new Evaluation(Trains_smote);
 
-				evaluation.crossValidateModel(classifyModel, Data, 10, new Random(1));
+				evaluation.crossValidateModel(classifyModel, Trains_smote, 10, new Random(1));
 
 				ArffInformation arffInformation = new ArffInformation();
 				arffInformation.setRun(run);
@@ -138,7 +142,7 @@ public class PDPweka {
 			CSVPrinter AllconfusionMatrixcsvPrinter = null;
 
 			if(!isFile) {
-				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","type","TP","FN","FP","TN","P","R","F","MCC","bugRatio","NumBuggy","NumClean","minimumCommit","defaultCluster","totalNumDev","NumDev"));
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","type","TP","FN","FP","TN","P","R","F","MCC","bugRatio","NumBuggy","NumClean","minimumCommit","defaultCluster","totalNumDev","NumDev","startGap"));
 			}else {
 				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT);
 			}
@@ -149,7 +153,7 @@ public class PDPweka {
 
 			for(String algorithm : algorithm_MLresult.keySet()) {
 
-				confusionMatrixWriter = new BufferedWriter(new FileWriter(outputPath + File.separator + projectname +"_"+algorithm+"_CM.csv"));
+				confusionMatrixWriter = new BufferedWriter(new FileWriter(outputPath + File.separator + projectname +"_"+algorithm+"_"+type+"_CM.csv"));
 				CSVPrinter confusionMatrixcsvPrinter = new CSVPrinter(confusionMatrixWriter, CSVFormat.DEFAULT.withHeader("algorithm","run","TP","FN","FP","TN","precision","recall","fMeasure","MCC","AUC","total","buggy","clean","Ratio(%)"));
 
 				ArrayList<ArffInformation> MLresults = algorithm_MLresult.get(algorithm);
@@ -208,7 +212,7 @@ public class PDPweka {
 				double under = (TPs + FPs) * (TPs + FNs) * (TNs +FPs) * (TNs+FNs);
 				double MCC = up/Math.sqrt(under);
 
-				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,type,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr,buggy_trs,clean_trs,minimumCommit,defaultCluster,totalDeveloper,preprocessedDeveloper);
+				AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,algorithm,type,(int)TPs,(int)FNs,(int)FPs,(int)TNs,precisions,recalls,fMeasures,MCC,ratio_tr,buggy_trs,clean_trs,minimumCommit,defaultCluster,totalDeveloper,preprocessedDeveloper,startGap);
 
 				confusionMatrixcsvPrinter.close();
 				confusionMatrixWriter.close();
@@ -297,6 +301,13 @@ public class PDPweka {
 		this.preprocessedDeveloper = preprocessedDeveloper;
 	}
 
+	protected String getStartGap() {
+		return startGap;
+	}
+
+	protected void setStartGap(String startGap) {
+		this.startGap = startGap;
+	}
 
 
 }
