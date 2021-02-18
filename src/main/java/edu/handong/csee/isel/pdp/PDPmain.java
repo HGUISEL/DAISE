@@ -697,7 +697,7 @@ public class PDPmain {
 		if(bow == false) {
 			extratPDPargs[2] = "p";
 		}else {
-			extratPDPargs[2] = "bow";
+			extratPDPargs[2] = "bowP";
 		}
 
 		return extratPDPargs;

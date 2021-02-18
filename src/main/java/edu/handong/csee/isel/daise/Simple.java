@@ -57,7 +57,7 @@ public class Simple{
 			CSVPrinter AllconfusionMatrixcsvPrinter = null;
 
 			if(!isFile) {
-				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","MSEvaluation","precision","recall","fMeasure","MCC","AUC","TotalInstance_smote","NumBuggy_smote","NumClean_smote","bugRatio_smote","TotalInstance","NumBuggy","NumClean","bugRatio"));
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","algorithm","SmotePer","precision","recall","fMeasure","MCC","AUC","TotalInstance_smote","NumBuggy_smote","NumClean_smote","bugRatio_smote","TotalInstance","NumBuggy","NumClean","bugRatio"));
 			}else {
 				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT);
 			}
@@ -95,6 +95,8 @@ public class Simple{
 
 			//preprocess
 			SMOTE smote=new SMOTE();
+			smote.setNearestNeighbors(5);
+			smote.setPercentage(500);
 			smote.setInputFormat(Data);
 			System.out.println("smote NN : " + smote.getNearestNeighbors());
 			System.out.println("smote percentage of bug : " + smote.getPercentage());
@@ -118,7 +120,7 @@ public class Simple{
 			ratio_smote = ((float)buggy_smote/(float)total_smote) * 100;
 
 			//set algorithms
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("random"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;
@@ -139,35 +141,35 @@ public class Simple{
 					classifyModel = new Logistic();
 				}
 
-				//			classifyModel.buildClassifier(Data_smote);
+							classifyModel.buildClassifier(Data_smote);
 
-				ArrayList<String> multisearchEvaluationNames = new ArrayList<String>(Arrays.asList("Fmeasure"));
-
-				for(String multisearchEvaluationName : multisearchEvaluationNames) {
-					MultiSearch multi_search = new MultiSearch();
-					SelectedTag tag = null;
-					if(multisearchEvaluationName.equals("AUC")) {
-						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_AUC, new DefaultEvaluationMetrics().getTags());
-					}
-					else if(multisearchEvaluationName.equals("Fmeasure")) {
-						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_FMEASURE, new DefaultEvaluationMetrics().getTags());
-					}
-					else if(multisearchEvaluationName.equals("MCC")) {
-						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_MATTHEWS_CC, new DefaultEvaluationMetrics().getTags());
-					}
-					else if(multisearchEvaluationName.equals("Precision")) {
-						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_PRECISION, new DefaultEvaluationMetrics().getTags());
-					}
-					else if(multisearchEvaluationName.equals("Recall")) {
-						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_RECALL, new DefaultEvaluationMetrics().getTags());
-					}
-					multi_search.setEvaluation(tag);
-					multi_search.setAlgorithm(new DefaultSearch());
-					multi_search.setClassifier(classifyModel);
-					multi_search.buildClassifier(Data_smote);//여기서 error / Method not found: isRidge
-					
+//				ArrayList<String> multisearchEvaluationNames = new ArrayList<String>(Arrays.asList("Fmeasure"));
+//
+//				for(String multisearchEvaluationName : multisearchEvaluationNames) {
+//					MultiSearch multi_search = new MultiSearch();
+//					SelectedTag tag = null;
+//					if(multisearchEvaluationName.equals("AUC")) {
+//						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_AUC, new DefaultEvaluationMetrics().getTags());
+//					}
+//					else if(multisearchEvaluationName.equals("Fmeasure")) {
+//						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_FMEASURE, new DefaultEvaluationMetrics().getTags());
+//					}
+//					else if(multisearchEvaluationName.equals("MCC")) {
+//						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_MATTHEWS_CC, new DefaultEvaluationMetrics().getTags());
+//					}
+//					else if(multisearchEvaluationName.equals("Precision")) {
+//						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_PRECISION, new DefaultEvaluationMetrics().getTags());
+//					}
+//					else if(multisearchEvaluationName.equals("Recall")) {
+//						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_RECALL, new DefaultEvaluationMetrics().getTags());
+//					}
+//					multi_search.setEvaluation(tag);
+//					multi_search.setAlgorithm(new DefaultSearch());
+//					multi_search.setClassifier(classifyModel);
+//					multi_search.buildClassifier(Data_smote);//여기서 error / Method not found: isRidge
+//					
 					Evaluation evaluation = new Evaluation(Data_smote);
-					evaluation.crossValidateModel(multi_search, Data_smote, 10, new Random(1));
+					evaluation.crossValidateModel(classifyModel, Data_smote, 10, new Random(1));
 
 					double precision = evaluation.precision(index);
 					double recall = evaluation.recall(index);
@@ -175,7 +177,7 @@ public class Simple{
 					double MCC = evaluation.matthewsCorrelationCoefficient(index);
 					double AUC = evaluation.areaUnderROC(index);
 
-					AllconfusionMatrixcsvPrinter.printRecord(projectname,algorithm,multisearchEvaluationName,precision,recall,fMeasure,MCC,AUC,total_smote,buggy_smote,clean_smote,ratio_smote,total,buggy,clean,ratio);
+					AllconfusionMatrixcsvPrinter.printRecord(projectname,algorithm,smote.getPercentage(),precision,recall,fMeasure,MCC,AUC,total_smote,buggy_smote,clean_smote,ratio_smote,total,buggy,clean,ratio);
 
 					//			for(int i = 1; i < Integer.parseInt(args[2])+1; i++) {
 					//				evaluation.crossValidateModel(classifyModel, Data_smote, 10, new Random(i));
@@ -195,7 +197,7 @@ public class Simple{
 					//				bufferedWriter.close();
 					//				}
 				}
-			}
+//			}
 			AllconfusionMatrixcsvPrinter.close();
 			AllconfusionMatrixWriter.close();
 

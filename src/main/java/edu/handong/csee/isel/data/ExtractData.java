@@ -60,6 +60,8 @@ public class ExtractData {
 			initOnlineMetric();
 		else if (mode.compareTo("bow") == 0)
 			initNoBOWonlineMetric();
+		else if (mode.compareTo("bowP") == 0)
+			initNoBOWpdpMetric();
 		
 		String content = FileUtils.readFileToString(originArff, "UTF-8");
 		String[] lines = content.split("\n");

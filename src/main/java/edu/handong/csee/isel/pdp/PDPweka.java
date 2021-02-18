@@ -20,14 +20,13 @@ import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.Logistic;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.trees.ADTree;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
-import weka.filters.Filter;
-import weka.filters.supervised.instance.SMOTE;
 
 public class PDPweka {
 	
@@ -82,7 +81,7 @@ public class PDPweka {
 			tr_b.put(run,attStats.nominalCounts[1]);
 			tr_c.put(run,attStats.totalCount);
 
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("adt"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;
@@ -101,6 +100,8 @@ public class PDPweka {
 					classifyModel = new IBk();
 				}else if (algorithm.compareTo("logi") == 0) {
 					classifyModel = new Logistic();
+				}else if (algorithm.compareTo("adt") == 0) {
+					classifyModel = new ADTree();
 				}
 
 				classifyModel.buildClassifier(Trains_smote);
