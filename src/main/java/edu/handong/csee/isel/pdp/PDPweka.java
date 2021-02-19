@@ -81,7 +81,7 @@ public class PDPweka {
 			tr_b.put(run,attStats.nominalCounts[1]);
 			tr_c.put(run,attStats.totalCount);
 
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("adt"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;

@@ -33,6 +33,7 @@ import org.apache.commons.io.FileUtils;
 import edu.handong.csee.isel.MainDAISE;
 import edu.handong.csee.isel.data.ExtractData;
 import weka.clusterers.ClusterEvaluation;
+import weka.clusterers.Cobweb;
 import weka.clusterers.EM;
 import weka.core.Instances;
 import weka.core.converters.CSVLoader;
@@ -438,10 +439,13 @@ public class PDPmain {
 		Instances newData = Filter.useFilter(data, removeFilter);
 
 		//apply EM clustering algorithm
-		EM em = new EM();
-		if(defaultCluster != 0) {
-			em.setNumClusters(defaultCluster); //option
-		}
+		Cobweb em = new  Cobweb();
+		//for cobweb  defaultCluster = 1;
+		defaultCluster = 1;
+//for cobweb
+//		if(defaultCluster != 0) {
+//			em.setNumClusters(defaultCluster); //option
+//		}
 		em.buildClusterer(newData);
 
 
@@ -470,16 +474,17 @@ public class PDPmain {
 
 		System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
 
-		if(eval.getNumClusters() == 1) {
-			em.setNumClusters(2);
-			em.buildClusterer(newData);
-
-			eval = new ClusterEvaluation();
-			eval.setClusterer(em);
-			eval.evaluateClusterer(newData);
-
-			System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
-		}
+//for cobweb
+//		if(eval.getNumClusters() == 1) {
+//			em.setNumClusters(2);
+//			em.buildClusterer(newData);
+//
+//			eval = new ClusterEvaluation();
+//			eval.setClusterer(em);
+//			eval.evaluateClusterer(newData);
+//
+//			System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
+//		}
 
 
 		double[] assignments = eval.getClusterAssignments();
