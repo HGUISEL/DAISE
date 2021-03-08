@@ -43,7 +43,9 @@ import weka.filters.unsupervised.attribute.Remove;
 public class PDPmain {
 	String arffPath;
 	String outputPath;
+	String BICpath;
 	int defaultCluster;
+	int numOfCluster;
 	int minimumCommit;
 	int startGap;
 	boolean isBaseLine;
@@ -52,6 +54,7 @@ public class PDPmain {
 	boolean help;
 
 	static String projectName;
+	static int averageBugFixingTime;
 	String referenceFolderPath;
 	ArrayList<String> keyOfFinalArffFile = new ArrayList<String>();
 
@@ -103,6 +106,22 @@ public class PDPmain {
 
 			System.out.println(referenceFolderPath);
 			System.out.println(projectName);
+			
+			//read BIC file and calculate Average Bug fix time
+			Reader in = new FileReader(BICpath);
+			Iterable<CSVRecord> records = CSVFormat.RFC4180.withHeader().parse(in);
+			int calDateDays = 0;
+			int numOfBIC = 0;
+			
+			for (CSVRecord record : records) {
+				String BICtime = record.get("BIDate");
+				String BFCtime = record.get("FixDate");
+				calDateDays = calDateDays + calDateBetweenAandB(BICtime,BFCtime);
+				numOfBIC++;
+			}
+			
+			averageBugFixingTime = calDateDays/numOfBIC;
+			System.out.println("averageBugFixingTime : "+averageBugFixingTime);
 
 			//mk result directory
 			File PDPDir = new File(outputPath +File.separator+projectName+"-PDP"+File.separator);
@@ -184,8 +203,11 @@ public class PDPmain {
 			System.out.println("lastCommitDate : "+lastCommitDate);
 
 			String startDate = addMonth(firstCommitDate,startGap);
+			String endDate = addDate(lastCommitDate,-averageBugFixingTime);
+			int TotalNumOfCommitId = commitHashs.size();
 			System.out.println("startDate : " + startDate);
-			System.out.println("Total number of CommitHash : " + commitHashs.size());
+			System.out.println("endDate : " + endDate);
+			System.out.println("Total number of CommitHash : " + commitHashs.size()); 
 			System.out.println();
 			
 			//save the information of each instance
@@ -194,8 +216,9 @@ public class PDPmain {
 			
 			for(String line : dataLineList) {
 				String commitTime = parsingCommitTime(line,firstCommitTime,indexOfCommitTime);
-				if(!(startDate.compareTo(commitTime)<=0))
+				if(!(startDate.compareTo(commitTime)<=0 && commitTime.compareTo(endDate)<=0 ))
 					continue;
+				
 				
 				String developerID = parsingDevloperID(line,firstDeveloperID,indexOfDeveloperID);
 				String key = parsingKey(line,firstKey,indexOfKey);
@@ -218,6 +241,7 @@ public class PDPmain {
 				commitHashs.add(commitHash);
 			}
 			
+			int ExNumOfCommitId = commitHashs.size();
 			System.out.println("The number of CommitHash : " + commitHashs.size());
 
 			//save total number of developer
@@ -348,6 +372,23 @@ public class PDPmain {
 
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
 			}
+			
+			//save the information of project to csv
+			File temp = new File(outputPath + File.separator + "Project_Information.csv");
+			boolean isFile = temp.isFile();
+			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(outputPath + File.separator + "Project_Information.csv", true));
+			CSVPrinter AllconfusionMatrixcsvPrinter = null;
+			
+			if(!isFile) {
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT.withHeader("Project","averageBFT","firstCommitDate","lastCommitDate","startDate","endDate","TotalNumOfCommitId","ExNumOfCommitId","minimumCommit","totalDev","minCommitDev","numOfCluster","defaultCluster"));
+			}else {
+				AllconfusionMatrixcsvPrinter = new CSVPrinter(AllconfusionMatrixWriter, CSVFormat.DEFAULT);
+			}
+			
+			AllconfusionMatrixcsvPrinter.printRecord(PDPmain.projectName,averageBugFixingTime,firstCommitDate,lastCommitDate,startDate,endDate,TotalNumOfCommitId,ExNumOfCommitId,minimumCommit,totalNumOfDeveloper,preprocessedDeveloper,numOfCluster,defaultCluster);
+			AllconfusionMatrixcsvPrinter.close();
+			AllconfusionMatrixWriter.close();
+			
 			//weka  PDParffDirectoryPath  arffDirectoryPath
 			wekaClassify(baselineDirectory,outputPath,"baseline","baseline","baseline","baseline","baseline",Integer.toString(startGap));
 			System.out.println("Finish baseline");
@@ -396,6 +437,42 @@ public class PDPmain {
 		}
 		return format.format(cal.getTime());
 	}
+	
+	private String addDate(String dt, int d) throws Exception  {
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+		Calendar cal = Calendar.getInstance();
+		Date date = format.parse(dt);
+		cal.setTime(date);
+		cal.add(Calendar.DATE, d);		//년 더하기
+
+		return format.format(cal.getTime());
+
+	}
+	
+	private static int calDateBetweenAandB(String preTime, String commitTime) throws Exception {
+
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd");
+		// date1, date2 두 날짜를 parse()를 통해 Date형으로 변환.
+
+		Date FirstDate = format.parse(preTime);
+		Date SecondDate = format.parse(commitTime);
+
+		// Date로 변환된 두 날짜를 계산한 뒤 그 리턴값으로 long type 변수를 초기화 하고 있다.
+		// 연산결과 -950400000. long type 으로 return 된다.
+		long calDate = FirstDate.getTime() - SecondDate.getTime(); 
+
+		// Date.getTime() 은 해당날짜를 기준으로1970년 00:00:00 부터 몇 초가 흘렀는지를 반환해준다. 
+		// 이제 24*60*60*1000(각 시간값에 따른 차이점) 을 나눠주면 일수가 나온다.
+		long calDateDays = calDate / ( 24*60*60*1000); 
+
+		calDateDays = Math.abs(calDateDays);
+		//        System.out.println(commitTime);
+		//        System.out.println("두 날짜의 날짜 차이: "+calDateDays);
+
+		return (int)calDateDays;
+
+	}
 
 	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit, String totalNumOfDeveloper, String preprocessedDeveloper, String startGap) throws Exception {
 
@@ -439,13 +516,11 @@ public class PDPmain {
 		Instances newData = Filter.useFilter(data, removeFilter);
 
 		//apply EM clustering algorithm
-		Cobweb em = new  Cobweb();
-		//for cobweb  defaultCluster = 1;
-		defaultCluster = 1;
-//for cobweb
-//		if(defaultCluster != 0) {
-//			em.setNumClusters(defaultCluster); //option
-//		}
+		EM em = new  EM();
+
+		if(defaultCluster != 0) {
+			em.setNumClusters(defaultCluster); //option
+		}
 		em.buildClusterer(newData);
 
 
@@ -474,18 +549,18 @@ public class PDPmain {
 
 		System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
 
-//for cobweb
-//		if(eval.getNumClusters() == 1) {
-//			em.setNumClusters(2);
-//			em.buildClusterer(newData);
-//
-//			eval = new ClusterEvaluation();
-//			eval.setClusterer(em);
-//			eval.evaluateClusterer(newData);
-//
-//			System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
-//		}
+		if(eval.getNumClusters() == 1) {
+			em.setNumClusters(2);
+			em.buildClusterer(newData);
 
+			eval = new ClusterEvaluation();
+			eval.setClusterer(em);
+			eval.evaluateClusterer(newData);
+
+			System.out.println("------------------------------NUM cluster-----------------------  "+eval.getNumClusters());
+		}
+
+		numOfCluster = eval.getNumClusters();
 
 		double[] assignments = eval.getClusterAssignments();
 
@@ -717,6 +792,7 @@ public class PDPmain {
 			CommandLine cmd = parser.parse(options, args);
 			arffPath = cmd.getOptionValue("i");
 			outputPath = cmd.getOptionValue("o");
+			BICpath = cmd.getOptionValue("b");
 			if(outputPath.endsWith(File.separator)) {
 				outputPath = outputPath.substring(0, outputPath.lastIndexOf(File.separator));
 			}
@@ -799,6 +875,13 @@ public class PDPmain {
 				.desc("Set the number of minmumCommit. Format: Month. (default : 6 month)")
 				.hasArg()
 				.argName("startGap")
+				.build());
+		
+		options.addOption(Option.builder("b").longOpt("BIC.csv")
+				.desc("BIC file path. Don't use double quotation marks")
+				.hasArg()
+				.argName("path")
+				.required()
 				.build());
 
 		return options;
