@@ -20,13 +20,22 @@ import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.Logistic;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.meta.FilteredClassifier;
+import weka.classifiers.meta.MultiSearch;
+import weka.classifiers.meta.multisearch.DefaultEvaluationMetrics;
+import weka.classifiers.meta.multisearch.DefaultSearch;
 import weka.classifiers.trees.ADTree;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.LMT;
 import weka.classifiers.trees.RandomForest;
 import weka.core.AttributeStats;
 import weka.core.Instances;
+import weka.core.SelectedTag;
 import weka.core.converters.ConverterUtils.DataSource;
+import weka.core.setupgenerator.MathParameter;
+import weka.filters.supervised.instance.SMOTE;
+import weka.core.setupgenerator.AbstractParameter;
+
 
 public class PDPweka {
 	
@@ -39,8 +48,8 @@ public class PDPweka {
 	String totalDeveloper;
 	String preprocessedDeveloper;
 	String startGap;
-
-	static HashMap<String,HashMap<Integer,Integer>> tr_bc_num  ;
+	String resultFileName;
+	HashMap<String,HashMap<Integer,Integer>> tr_bc_num  ;
 
 	public void main() throws Exception {
 		init();
@@ -81,7 +90,7 @@ public class PDPweka {
 			tr_b.put(run,attStats.nominalCounts[1]);
 			tr_c.put(run,attStats.totalCount);
 
-			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("ibk"));
+			ArrayList<String> algorithms = new ArrayList<String>(Arrays.asList("adt"));
 
 			for(String algorithm : algorithms) {
 				Classifier classifyModel = null;
@@ -103,30 +112,70 @@ public class PDPweka {
 				}else if (algorithm.compareTo("adt") == 0) {
 					classifyModel = new ADTree();
 				}
+				
+				//multisearch
+				ArrayList<String> multisearchEvaluationNames = new ArrayList<String>(Arrays.asList("Fmeasure"));
+				MultiSearch multi_search = new MultiSearch();
+				FilteredClassifier f = new FilteredClassifier();
+				SMOTE smote = new SMOTE();
+				
+				MathParameter param = new MathParameter();
+				param.setProperty("numOfBoostingIterations");
+				param.setMin(2);
+				param.setMax(3);
+				param.setStep(1);
+				param.setExpression("I");
+				
+				for(String multisearchEvaluationName : multisearchEvaluationNames) {
+					SelectedTag tag = null;
+					if(multisearchEvaluationName.equals("AUC")) {
+						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_AUC, new DefaultEvaluationMetrics().getTags());
+					}
+					else if(multisearchEvaluationName.equals("Fmeasure")) {//!
+						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_FMEASURE, new DefaultEvaluationMetrics().getTags());
+					}
+					else if(multisearchEvaluationName.equals("MCC")) {//!
+						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_MATTHEWS_CC, new DefaultEvaluationMetrics().getTags());
+					}
+					else if(multisearchEvaluationName.equals("Precision")) {
+						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_PRECISION, new DefaultEvaluationMetrics().getTags());
+					}
+					else if(multisearchEvaluationName.equals("Recall")) {
+						tag = new SelectedTag(DefaultEvaluationMetrics.EVALUATION_RECALL, new DefaultEvaluationMetrics().getTags());
+					}
+					
+					multi_search.setSearchParameters(new AbstractParameter[]{param});
+					multi_search.setEvaluation(tag);
+					multi_search.setAlgorithm(new DefaultSearch());
+					multi_search.setClassifier(classifyModel);
+					
+					
+					multi_search.buildClassifier(Trains_smote);
+					
+					classifyModel.buildClassifier(Trains_smote);
 
-				classifyModel.buildClassifier(Trains_smote);
+					Evaluation evaluation = new Evaluation(Trains_smote);
 
-				Evaluation evaluation = new Evaluation(Trains_smote);
+					evaluation.crossValidateModel(classifyModel, Trains_smote, 10, new Random(1));
 
-				evaluation.crossValidateModel(classifyModel, Trains_smote, 10, new Random(1));
+					ArffInformation arffInformation = new ArffInformation();
+					arffInformation.setRun(run);
+					arffInformation.setTP(evaluation.numTruePositives(index));
+					arffInformation.setFN(evaluation.numFalseNegatives(index));
+					arffInformation.setFP(evaluation.numFalsePositives(index));
+					arffInformation.setTN(evaluation.numTrueNegatives(index));
+					arffInformation.setAUC(evaluation.areaUnderROC(index));
 
-				ArffInformation arffInformation = new ArffInformation();
-				arffInformation.setRun(run);
-				arffInformation.setTP(evaluation.numTruePositives(index));
-				arffInformation.setFN(evaluation.numFalseNegatives(index));
-				arffInformation.setFP(evaluation.numFalsePositives(index));
-				arffInformation.setTN(evaluation.numTrueNegatives(index));
-				arffInformation.setAUC(evaluation.areaUnderROC(index));
+					ArrayList<ArffInformation> MLresult;
 
-				ArrayList<ArffInformation> MLresult;
-
-				if(algorithm_MLresult.containsKey(algorithm)) {
-					MLresult = algorithm_MLresult.get(algorithm);
-					MLresult.add(arffInformation);
-				}else {
-					MLresult = new ArrayList<>();
-					MLresult.add(arffInformation);
-					algorithm_MLresult.put(algorithm, MLresult);
+					if(algorithm_MLresult.containsKey(algorithm)) {
+						MLresult = algorithm_MLresult.get(algorithm);
+						MLresult.add(arffInformation);
+					}else {
+						MLresult = new ArrayList<>();
+						MLresult.add(arffInformation);
+						algorithm_MLresult.put(algorithm, MLresult);
+					}
 				}
 			}
 		}
@@ -137,9 +186,9 @@ public class PDPweka {
 	private void save2CSV(HashMap<String, ArrayList<ArffInformation>> algorithm_MLresult) {
 		try {
 			BufferedWriter confusionMatrixWriter;
-			File temp = new File(output+File.separator + "PDP_result.csv");
+			File temp = new File(output+File.separator + "PDP_result_"+resultFileName+".csv");
 			boolean isFile = temp.isFile();
-			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + "PDP_result.csv", true));
+			BufferedWriter AllconfusionMatrixWriter = new BufferedWriter(new FileWriter(output+File.separator + "PDP_result_"+resultFileName+".csv", true));
 			CSVPrinter AllconfusionMatrixcsvPrinter = null;
 
 			if(!isFile) {
@@ -308,6 +357,14 @@ public class PDPweka {
 
 	protected void setStartGap(String startGap) {
 		this.startGap = startGap;
+	}
+
+	protected String getResultFileName() {
+		return resultFileName;
+	}
+
+	protected void setResultFileName(String resultFileName) {
+		this.resultFileName = resultFileName;
 	}
 
 

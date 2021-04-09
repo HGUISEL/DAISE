@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Reader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -33,11 +34,14 @@ import org.apache.commons.io.FileUtils;
 import edu.handong.csee.isel.MainDAISE;
 import edu.handong.csee.isel.data.ExtractData;
 import weka.clusterers.ClusterEvaluation;
-import weka.clusterers.Cobweb;
 import weka.clusterers.EM;
+import weka.core.AttributeStats;
 import weka.core.Instances;
+import weka.core.converters.ArffSaver;
 import weka.core.converters.CSVLoader;
+import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
+import weka.filters.supervised.instance.SMOTE;
 import weka.filters.unsupervised.attribute.Remove;
 
 public class PDPmain {
@@ -83,10 +87,18 @@ public class PDPmain {
 				printHelp(options);
 				return;
 			}
-			String baselineDirectory;
-			String PDPbaselineDirectory;
-			String PDPpbdpDirectory;
-
+			//no smote directory path
+			String baselineArffPath_noSmote;
+			String PDPdeveloperArffPath_noSmote;
+			String PBDPdeveloperArffPath_noSmote;
+			//smote directory path
+			String baselineDirectory_Smote;
+			String PDPdeveloperArffPath_Smote;
+			String PBDPDirectory_Smote;
+			//smote with bug ratio 0 dev
+			String baselineDirectory_Smote_devO;
+			String PBDPDirectory_Smote_devO;
+			
 			//parsing projectName and reference folder name
 			Pattern pattern = Pattern.compile("(.+)/(.+)-data.arff");
 			Matcher matcher = pattern.matcher(arffPath);
@@ -219,7 +231,6 @@ public class PDPmain {
 				if(!(startDate.compareTo(commitTime)<=0 && commitTime.compareTo(endDate)<=0 ))
 					continue;
 				
-				
 				String developerID = parsingDevloperID(line,firstDeveloperID,indexOfDeveloperID);
 				String key = parsingKey(line,firstKey,indexOfKey);
 				String commitHash = key.substring(0,key.indexOf("-"));
@@ -247,15 +258,6 @@ public class PDPmain {
 			//save total number of developer
 			int totalNumOfDeveloper = developerInformation.size();
 			System.out.println("total dev : "+totalNumOfDeveloper);
-			
-			//smote preprocess
-//			try {
-//				SMOTE smote=new SMOTE();
-//				smote.setInputFormat(Data);
-//				Trains_smote = Filter.useFilter(Data, smote);
-//			}catch(Exception e) {
-//				Trains_smote = Data;
-//			}
 
 			//count the number of commit each developer
 			TreeMap<Integer,ArrayList<String>> numOfCommit_developer = new TreeMap<>(Collections.reverseOrder());
@@ -285,42 +287,23 @@ public class PDPmain {
 			System.out.println("mincommitDev : "+preprocessedDeveloper);
 
 
-			//save real baseline
-			File baselineArff = new File(directoryPath+File.separator+"baselineArff");
-			String baselinePath = baselineArff.getAbsolutePath();
-			baselineArff.mkdir();
-			baselineDirectory = baselinePath;
+			//save no_smote baseline arff
+			File baselineArff_noSmote = new File(directoryPath+File.separator+"baselineArff_noSmote");
+			baselineArff_noSmote.mkdir();
+			baselineArffPath_noSmote = baselineArff_noSmote.getAbsolutePath();
 
-			File baselineFileArff = new File(baselinePath +File.separator+ projectName +"_baseline.arff");
-			StringBuffer baselineBuf = new StringBuffer();
-
-			//write attribute
-			for (String line : attributeLineList) {
-				if(line.startsWith("@attribute meta_data-commitTime")) continue;
-				if(line.startsWith("@attribute Key {")) continue;
-				baselineBuf.append(line + "\n");
-			}
-
-			for(String developerID : developerID_Instances.keySet()) {
-				for(String data : developerID_Instances.get(developerID)) {
-					baselineBuf.append(data + "\n");
-				}
-			}
-
-			FileUtils.write(baselineFileArff, baselineBuf.toString(), "UTF-8");
-
-			System.out.println("Success saveing baseline");
+			makeBaseLineArff(baselineArffPath_noSmote,attributeLineList,developerID_Instances);
 
 
 			//Save PDP arff file
-			File developerArff = new File(directoryPath+File.separator+"developerArff");
-			String arffDirectoryPath = developerArff.getAbsolutePath();
-			developerArff.mkdir();
-			PDPbaselineDirectory = arffDirectoryPath;
+			File PDPdeveloperArff_noSmote = new File(directoryPath+File.separator+"PDPdeveloperArff_noSmote");
+			PDPdeveloperArff_noSmote.mkdir();
+			PDPdeveloperArffPath_noSmote = PDPdeveloperArff_noSmote.getAbsolutePath();
 			int fileName = 0;
+			HashMap<Integer,String> fileName_developerID = new HashMap<>();
 
 			for(String developerID : developerID_Instances.keySet()) {
-				File newDeveloperArff = new File(arffDirectoryPath +File.separator+ fileName+".arff");
+				File newDeveloperArff = new File(PDPdeveloperArffPath_noSmote +File.separator+ fileName+".arff");
 				StringBuffer newContentBuf = new StringBuffer();
 
 				//write attribute
@@ -335,6 +318,7 @@ public class PDPmain {
 				}
 
 				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+				fileName_developerID.put(fileName, developerID);
 				fileName++;
 			}
 
@@ -346,32 +330,132 @@ public class PDPmain {
 			defaultCluster = cluster_developer.size();
 
 			//save the result
-			File PDPdeveloperArff = new File(directoryPath+File.separator+"PBDPdeveloperArff");
-			String PDParffDirectoryPath = PDPdeveloperArff.getAbsolutePath();
-			PDPdeveloperArff.mkdir();
-			PDPpbdpDirectory = PDParffDirectoryPath;
+			File PBDPdeveloperArff_noSmote = new File(directoryPath+File.separator+"PBDPdeveloperArff_noSmote");
+			PBDPdeveloperArff_noSmote.mkdir();
+			PBDPdeveloperArffPath_noSmote = PBDPdeveloperArff_noSmote.getAbsolutePath();
 
-			for(int cluster : cluster_developer.keySet()) {
-				ArrayList<String> developers = cluster_developer.get(cluster);
-
-				File newDeveloperArff = new File(PDParffDirectoryPath +File.separator+cluster+".arff");
-				StringBuffer newContentBuf = new StringBuffer();
-
-				//write attribute
-				for (String line : attributeLineList) {
-					if(line.startsWith("@attribute meta_data-commitTime")) continue;
-					if(line.startsWith("@attribute Key {")) continue;
-					newContentBuf.append(line + "\n");
-				}
-
-				for(String developerID : developers) {
-					for(String data : developerID_Instances.get(developerID)) {
-						newContentBuf.append(data + "\n");
-					}
-				}
-
-				FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
-			}
+			makePBDParff(PBDPdeveloperArffPath_noSmote, cluster_developer, attributeLineList, developerID_Instances);
+			
+			//****apply smote****//
+//			Instances smoteData = null;
+//			Instances smoteDataWithNoBuggy = null;
+//			
+//			HashMap<Integer,Instances> cluster_SmoteDevNoBuggy = new HashMap<>();
+//			HashMap<Integer,Instances> cluster_Smotedev = new HashMap<>();
+//			
+//			//1) read PDP arff directory and apply SMOTE
+//			SMOTE smote = new SMOTE();
+//			File PDPdeveloperArff_Smote = new File(directoryPath+File.separator+"PDPdeveloperArff_Smote");
+//			PDPdeveloperArff_Smote.mkdir();
+//			PDPdeveloperArffPath_Smote = PDPdeveloperArff_Smote.getAbsolutePath();
+//			int i =0 ;
+//			for(int name : fileName_developerID.keySet()) {
+//				String devID = fileName_developerID.get(name);
+//				int cluster = findDevCluster(devID,cluster_developer);
+//				int percentage = 200;
+//				
+//				//read arff file
+//				DataSource source = new DataSource(PDPdeveloperArffPath_noSmote+File.separator+name+".arff");
+//				Instances Data = source.getDataSet();
+//				Data.setClassIndex(0);
+//				AttributeStats attStats = Data.attributeStats(0);
+//				
+//				//find index of buggy
+//				int buggyIndex = Data.attribute(0).indexOfValue("buggy");
+//				int cleanIndex = Data.attribute(0).indexOfValue("clean");
+//				
+//				//check num of buggy of developer : number of buggy > 5(NN)
+//				if(attStats.nominalCounts[buggyIndex] > 5) {
+//					
+//					//maximum ratio of classes = buggy : clean = 1 : 1
+//					if((attStats.nominalCounts[buggyIndex] * 3) > attStats.nominalCounts[cleanIndex]) {
+//						percentage = (int)((((double)attStats.nominalCounts[cleanIndex])/(double)(attStats.nominalCounts[buggyIndex])-1) * 100);
+//					}
+//					
+//					//apply smote
+//					smote.setInputFormat(Data);
+//					smote.setNearestNeighbors(5);
+//					smote.setPercentage(percentage);
+//					Data = Filter.useFilter(Data, smote);
+//					
+//					ArffSaver s= new ArffSaver();
+//					s.setInstances(Data);
+//					s.setFile(new File(PDPdeveloperArffPath_Smote +File.separator+ name+".arff"));
+//					s.writeBatch();
+//					
+//					//add dev : num of buggy > 0
+//					if(smoteData == null) {
+//						smoteData = new Instances(Data);
+//					}else {
+//						smoteData.addAll(Data);
+//					}
+//					
+//					if(cluster_Smotedev.containsKey(cluster)) {
+//						Instances clusterData = new Instances(cluster_Smotedev.get(cluster));
+//						clusterData.addAll(Data);
+//						cluster_Smotedev.put(cluster, clusterData);
+//					}else {
+//						cluster_Smotedev.put(cluster, new Instances(Data));
+//					}
+//				}
+//
+//				//add dev : regardless of num of buggy
+//				if(smoteDataWithNoBuggy == null) {
+//					smoteDataWithNoBuggy = new Instances(Data);
+//				}else {
+//					smoteDataWithNoBuggy.addAll(Data);
+//				}
+//				
+//				if(cluster_SmoteDevNoBuggy.containsKey(cluster)) {
+//					Instances clusterData = new Instances(cluster_SmoteDevNoBuggy.get(cluster));
+//					clusterData.addAll(Data);
+//					cluster_SmoteDevNoBuggy.put(cluster, clusterData);
+//				}else {
+//					cluster_SmoteDevNoBuggy.put(cluster, new Instances(Data));
+//				}
+//			}
+//			System.out.println("Success to save PDP_smote");
+//
+//			//2) make smote Baseline
+//			File baselineArff_Smote = new File(directoryPath+File.separator+"baselineArff_Smote");
+//			baselineArff_Smote.mkdir();
+//			baselineDirectory_Smote = baselineArff_Smote.getAbsolutePath();
+//			
+//			ArffSaver s= new ArffSaver();
+//			s.setInstances(smoteData);
+//			s.setFile(new File(baselineDirectory_Smote +File.separator+ projectName+"_baseline_smote.arff"));
+//			s.writeBatch();
+//			
+//			File baselineArff_Smote_devO = new File(directoryPath+File.separator+"baselineArff_Smote_devO");
+//			baselineArff_Smote_devO.mkdir();
+//			baselineDirectory_Smote_devO = baselineArff_Smote_devO.getAbsolutePath();
+//			
+//			s.setInstances(smoteDataWithNoBuggy);
+//			s.setFile(new File(baselineDirectory_Smote_devO +File.separator+ projectName+"_baseline_smote_dev0.arff"));
+//			s.writeBatch();
+//			
+//			//3) make smote PBDP
+//			File PBDPdeveloperArff_Smote = new File(directoryPath+File.separator+"PBDPdeveloperArff_Smote");
+//			PBDPdeveloperArff_Smote.mkdir();
+//			PBDPDirectory_Smote = PBDPdeveloperArff_Smote.getAbsolutePath();
+//
+//			for(int cluster : cluster_Smotedev.keySet()) {
+//				ArffSaver arffPBDP= new ArffSaver();
+//				arffPBDP.setInstances(cluster_Smotedev.get(cluster));
+//				arffPBDP.setFile(new File(PBDPDirectory_Smote +File.separator+cluster+".arff"));
+//				arffPBDP.writeBatch();
+//			}
+//			
+//			File PBDPdeveloperArff_Smote_devO = new File(directoryPath+File.separator+"PBDPdeveloperArff_Smote_devO");
+//			PBDPdeveloperArff_Smote_devO.mkdir();
+//			PBDPDirectory_Smote_devO = PBDPdeveloperArff_Smote_devO.getAbsolutePath();
+//			
+//			for(int cluster : cluster_SmoteDevNoBuggy.keySet()) {
+//				ArffSaver arffPBDP= new ArffSaver();
+//				arffPBDP.setInstances(cluster_SmoteDevNoBuggy.get(cluster));
+//				arffPBDP.setFile(new File(PBDPDirectory_Smote_devO +File.separator+cluster+".arff"));
+//				arffPBDP.writeBatch();
+//			}
 			
 			//save the information of project to csv
 			File temp = new File(outputPath + File.separator + "Project_Information.csv");
@@ -390,19 +474,104 @@ public class PDPmain {
 			AllconfusionMatrixWriter.close();
 			
 			//weka  PDParffDirectoryPath  arffDirectoryPath
-			wekaClassify(baselineDirectory,outputPath,"baseline","baseline","baseline","baseline","baseline",Integer.toString(startGap));
-			System.out.println("Finish baseline");
-			wekaClassify(PDPbaselineDirectory,outputPath,"PDP","PDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap));
+//			wekaClassify(baselineArffPath_noSmote,outputPath,"baseline","baseline","baseline","baseline","baseline",Integer.toString(startGap),"noSmote");
+//			System.out.println("Finish baseline");
+			wekaClassify(PDPdeveloperArffPath_noSmote,outputPath,"PDP","PDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap),"noSmote");
 			System.out.println("Finish PDP");
-			wekaClassify(PDPpbdpDirectory,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap));
-			System.out.println("Finish "+projectName);
-
+//			wekaClassify(PBDPdeveloperArffPath_noSmote,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap),"noSmote");
+//			System.out.println("Finish "+projectName);
+			
+//			//weka smote data
+//			wekaClassify(baselineDirectory_Smote,outputPath,"baseline","baseline","baseline","baseline","baseline",Integer.toString(startGap),"Smote");
+//			System.out.println("Finish smote baseline");
+//			wekaClassify(PDPdeveloperArffPath_Smote,outputPath,"PDP","PDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap),"Smote");
+//			System.out.println("Finish smote PDP");
+//			wekaClassify(PBDPDirectory_Smote,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap),"Smote");
+//			System.out.println("Finish smote PBDP");
+//			
+//			//weka smote data include dev0
+//			wekaClassify(baselineDirectory_Smote_devO,outputPath,"baseline","baseline","baseline","baseline","baseline",Integer.toString(startGap),"Smote_devO");
+//			System.out.println("Finish smote_dev0 baseline");
+//			wekaClassify(PBDPDirectory_Smote_devO,outputPath,Integer.toString(defaultCluster),"PBDP",Integer.toString(minimumCommit),Integer.toString(totalNumOfDeveloper),Integer.toString(preprocessedDeveloper),Integer.toString(startGap),"Smote_devO");
+//			System.out.println("Finish smote_dev0 PBDP");
+//			System.out.println("Finish "+projectName);
 			if(verbose) {
 				System.out.println("Your program is terminated. (This message is shown because you turned on -v option!");
 			}
 		}
 	}
 	
+	private int findDevCluster(String devID, HashMap<Integer, ArrayList<String>> cluster_developer) {
+		int returnCluster = 0;
+		for(int cluster : cluster_developer.keySet()) {
+			if(cluster_developer.get(cluster).contains(devID)) {
+				returnCluster = cluster;
+				break;
+			}
+		}
+		return returnCluster;
+	}
+
+	private Instances mergeInstances(Instances smoteData, Instances instances) {
+		for(int i = 0; i < instances.size(); i++) {
+			smoteData.add(instances.get(i));
+		}
+		
+		return smoteData;
+	}
+
+	private void makePBDParff(String PBDPdeveloperArffPath_noSmote,
+			HashMap<Integer, ArrayList<String>> cluster_developer, ArrayList<String> attributeLineList,
+			HashMap<String, ArrayList<String>> developerID_Instances) throws IOException {
+		for(int cluster : cluster_developer.keySet()) {
+			ArrayList<String> developers = cluster_developer.get(cluster);
+
+			File newDeveloperArff = new File(PBDPdeveloperArffPath_noSmote +File.separator+cluster+".arff");
+			StringBuffer newContentBuf = new StringBuffer();
+
+			//write attribute
+			for (String line : attributeLineList) {
+				if(line.startsWith("@attribute meta_data-commitTime")) continue;
+				if(line.startsWith("@attribute Key {")) continue;
+				newContentBuf.append(line + "\n");
+			}
+
+			for(String developerID : developers) {
+				for(String data : developerID_Instances.get(developerID)) {
+					newContentBuf.append(data + "\n");
+				}
+			}
+
+			FileUtils.write(newDeveloperArff, newContentBuf.toString(), "UTF-8");
+		}
+		
+	}
+
+	private void makeBaseLineArff(String baselineArffPath_noSmote, ArrayList<String> attributeLineList,
+			HashMap<String, ArrayList<String>> developerID_Instances) throws IOException {
+		
+		File baselineFileArff = new File(baselineArffPath_noSmote +File.separator+ projectName +"_baseline.arff");
+		StringBuffer baselineBuf = new StringBuffer();
+
+		//write attribute
+		for (String line : attributeLineList) {
+			if(line.startsWith("@attribute meta_data-commitTime")) continue;
+			if(line.startsWith("@attribute Key {")) continue;
+			baselineBuf.append(line + "\n");
+		}
+
+		for(String developerID : developerID_Instances.keySet()) {
+			for(String data : developerID_Instances.get(developerID)) {
+				baselineBuf.append(data + "\n");
+			}
+		}
+
+		FileUtils.write(baselineFileArff, baselineBuf.toString(), "UTF-8");
+
+		System.out.println("Success saveing baseline");
+		
+	}
+
 	public static void deleteFile(String path) {
 		File deleteFolder = new File(path);
 
@@ -474,7 +643,7 @@ public class PDPmain {
 
 	}
 
-	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit, String totalNumOfDeveloper, String preprocessedDeveloper, String startGap) throws Exception {
+	public void wekaClassify(String path, String wekaOutputPath, String defaultCluster, String type, String minimumCommit, String totalNumOfDeveloper, String preprocessedDeveloper, String startGap, String resultFileName) throws Exception {
 
 		PDPweka PDPweka = new PDPweka();
 		PDPweka.setInputPath(path);
@@ -486,6 +655,7 @@ public class PDPmain {
 		PDPweka.setTotalDeveloper(totalNumOfDeveloper);
 		PDPweka.setPreprocessedDeveloper(preprocessedDeveloper);
 		PDPweka.setStartGap(startGap);
+		PDPweka.setResultFileName(resultFileName);
 		PDPweka.main();
 	}
 
